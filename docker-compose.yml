@@ -1,0 +1,82 @@
+x-shared-volumes: &shared_volumes
+  - ./:/usr/src/app
+  - ./data:/usr/src/app/data
+
+services:
+  db:
+    image: postgres:alpine
+    container_name: db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+
+
+  django:
+    build: .
+    container_name: django
+    env_file:
+      - .env
+    volumes: *shared_volumes
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+    command: python manage.py runserver 0.0.0.0:8000
+
+
+#  lux_bot:
+#    build: .
+#    container_name: lux_bot
+#    env_file:
+#      - .env
+#    volumes: *shared_volumes
+#    depends_on:
+#      - db
+#      - django
+#
+#    restart: unless-stopped
+#    command: python manage.py bot
+#
+#  redis:
+#    image: redis:alpine
+#    container_name: redis
+#    ports:
+#      - "6379:6379"
+#    restart: unless-stopped
+#
+#  celery:
+#    build: .
+#    container_name: celery
+#    env_file:
+#      - .env
+#    volumes: *shared_volumes
+#    depends_on:
+#      - django
+#      - db
+#      - redis
+#    restart: unless-stopped
+#    working_dir: /usr/src/app
+#    command: celery -A config worker --loglevel=info
+#
+#  celery_beat:
+#    build: .
+#    container_name: celery_beat
+#    env_file:
+#      - .env
+#    volumes: *shared_volumes
+#    depends_on:
+#      - django
+#      - db
+#      - redis
+#    restart: unless-stopped
+#    working_dir: /usr/src/app
+#    command: celery -A config beat --loglevel=info --scheduler celery.beat.PersistentScheduler
+#
+#volumes:
+#  db:
