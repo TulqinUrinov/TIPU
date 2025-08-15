@@ -1,0 +1,34 @@
+# Python bytecode fayllari
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# virtual environment
+.venv/
+env/
+venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Dockerfile va boshqa lokal fayllar
+.dockerignore
+*.log
+
+# media yoki upload fayllar (agar kerakmas bo‘lsa)
+media/
+static/
+
+# IDE fayllari
+.vscode/
+.idea/
+*.swp
+
+# tests (agar testlarni prod containerga kiritmaslik kerak bo‘lsa)
+tests/
