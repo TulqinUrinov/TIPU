@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     "data.faculty",
     "data.common",
     "data.specialization",
-
+    "data.contract",
 
 ]
 
