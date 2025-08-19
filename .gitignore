@@ -208,9 +208,13 @@ __marimo__/
 
 
 
-**/migrations/
+# Ignore barcha migratsiya fayllari
+**/migrations/*.py
+
+# Lekin __init__.py saqlansin
 !**/migrations/__init__.py
 
+**/__pycache__/
 
 # Celery stuff
 celerybeat-schedule*
