@@ -77,3 +77,5 @@ class Contract(BaseModel):
 
     def __str__(self):
         return f"{self.student.full_name} - {self.contract_type}"
+
+
