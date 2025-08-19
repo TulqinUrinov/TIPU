@@ -30,6 +30,9 @@ services:
     command: python manage.py runserver 0.0.0.0:8000
 
 
+volumes:
+  db:
+
 #  lux_bot:
 #    build: .
 #    container_name: lux_bot
@@ -78,5 +81,3 @@ services:
 #    working_dir: /usr/src/app
 #    command: celery -A config beat --loglevel=info --scheduler celery.beat.PersistentScheduler
 
-volumes:
-  db:
