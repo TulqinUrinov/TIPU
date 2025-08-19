@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     "data.common",
     "data.specialization",
     "data.contract",
-
+    "data.payment",
 ]
 
 MIDDLEWARE = [
