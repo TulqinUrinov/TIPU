@@ -38,7 +38,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("import/", include("data.common.urls")),
 
-
     # Swagger
     re_path(
         r"^swagger(?P<format>\.json|\.yaml)$",
