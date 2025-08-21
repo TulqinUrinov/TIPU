@@ -2,7 +2,7 @@ import jwt
 from django.conf import settings
 from django.http import JsonResponse
 from data.user.models import AdminUser
-from data.account.models import StudentUser
+from data.student_account.models import StudentUser
 
 
 class CustomJWTMiddleware:

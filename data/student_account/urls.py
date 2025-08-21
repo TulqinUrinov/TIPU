@@ -1,5 +1,5 @@
 from django.urls import path
-from data.account.views import *
+from data.student_account.views import *
 
 urlpatterns = [
     path('login/', StudentUserLoginAPIView.as_view(), name="student-login"),

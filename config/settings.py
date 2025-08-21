@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     "data.specialization",
     "data.contract",
     "data.payment",
-    "data.account",
+    "data.student_account",
     "data.user",
 ]
 
