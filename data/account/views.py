@@ -28,7 +28,7 @@ class StudentUserRegisterAPIView(APIView):
             access['student_user_id'] = str(student_user.id)
 
             return Response({
-                'access': str(refresh.access_token),
+                'access': str(access),
                 'refresh': str(refresh),
             }, status=status.HTTP_201_CREATED)
 
@@ -56,8 +56,13 @@ class StudentUserLoginAPIView(APIView):
             refresh['role'] = 'STUDENT'
             refresh['student_user_id'] = str(student_user.id)
 
+            # Access tokenga ham qo‘shish
+            access = refresh.access_token
+            access['role'] = 'STUDENT'
+            access['student_user_id'] = str(student_user.id)
+
             return Response({
-                'access': str(refresh.access_token),
+                'access': str(access),
                 'refresh': str(refresh),
             }, status=status.HTTP_200_OK)
 
@@ -94,10 +99,10 @@ class JWTtokenRefresh(APIView):
 
 class StudentMeAPIView(APIView):
     permission_classes = [IsAuthenticatedUserType]
+    authentication_classes = []  # DRF default authni o‘chiradi
 
     def get(self, request):
         student_user = getattr(request, 'student_user', None)
-        print(student_user)
         if not student_user:
             return Response({"error": "Student user not found"}, status=403)
 

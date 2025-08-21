@@ -12,4 +12,5 @@ class IsAuthenticatedUserType(BasePermission):
             return True
         if getattr(request, 'student_user', None):
             return True
+
         return False
