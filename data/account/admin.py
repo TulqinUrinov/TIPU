@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from data.student_account.models import StudentUser
+from data.account.models import StudentUser
 
 
 @admin.register(StudentUser)

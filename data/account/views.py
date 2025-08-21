@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from data.student_account.serializers import StudentUserLoginSerializer, StudentUserRegisterSerializer
+from data.account.serializers import StudentUserLoginSerializer, StudentUserRegisterSerializer
 
 from rest_framework_simplejwt.tokens import RefreshToken
 

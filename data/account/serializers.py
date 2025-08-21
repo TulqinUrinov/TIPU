@@ -1,7 +1,7 @@
 
 from rest_framework import serializers
 
-from data.student_account.models import StudentUser
+from data.account.models import StudentUser
 from data.student.models import Student
 
 
