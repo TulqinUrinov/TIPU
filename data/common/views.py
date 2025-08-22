@@ -14,7 +14,14 @@ class ImportStudentsAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if 'education_year' not in request.POST:
+            return Response(
+                {'error': 'education_year yuborilmadi'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         excel_file = request.FILES['excel_file']
+        education_year = request.POST.get('education_year')
 
         # Vaqtincha fayl yaratish
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
@@ -24,7 +31,7 @@ class ImportStudentsAPIView(APIView):
 
         try:
             # Import qilish
-            result = import_students_from_excel(tmp_file_path)
+            result = import_students_from_excel(tmp_file_path, education_year)
 
             # Vaqtincha faylni o'chirish
             os.unlink(tmp_file_path)

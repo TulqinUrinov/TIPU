@@ -5,19 +5,24 @@ from datetime import datetime
 import traceback
 
 from data.contract.models import Contract
+from data.education_year.models import EducationYear
 from data.faculty.models import Faculty
 from data.payment.models import Payment
 from data.specialization.models import Specialization
 from data.student.models import Student
+from data.studentedu_year.models import StudentEduYear
 
 
-def import_students_from_excel(file_path):
+def import_students_from_excel(file_path, education_year):
     """
     Excel fayldan ma'lumotlarni import qilish.
     Bitta xatolik bo'lsa ham hech narsa saqlanmaydi.
     Yangi ma'lumotlar qo'shiladi, mavjudlar yangilanadi.
     """
     try:
+        # O'quv yilini olish
+        edu_year = EducationYear.objects.get(id=education_year)
+
         # Excel faylni o'qish (header qatorini o'qimaymiz)
         df = pd.read_excel(file_path, sheet_name='report', header=None)
 
@@ -115,6 +120,12 @@ def import_students_from_excel(file_path):
                     # Validatsiya
                     student.full_clean()
                     student.save()
+
+                    # O‘quv yili bilan bog‘lash
+                    StudentEduYear.objects.get_or_create(
+                        student=student,
+                        education_year=edu_year
+                    )
 
                     # Raqamli maydonlarni tekshirish
                     numeric_fields = [

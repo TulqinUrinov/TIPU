@@ -4,7 +4,7 @@ from data.user.models import AdminUser
 
 
 class AdminUserSerializer(serializers.ModelSerializer):
-    id = serializers.UUIDField(read_only=True)
+    # id = serializers.UUIDField(read_only=True)
     password = serializers.CharField(write_only=True, required=False)
 
     class Meta:
