@@ -15,6 +15,7 @@ def import_students_from_excel(file_path):
     """
     Excel fayldan ma'lumotlarni import qilish.
     Bitta xatolik bo'lsa ham hech narsa saqlanmaydi.
+    Yangi ma'lumotlar qo'shiladi, mavjudlar yangilanadi.
     """
     try:
         # Excel faylni o'qish (header qatorini o'qimaymiz)
@@ -26,6 +27,7 @@ def import_students_from_excel(file_path):
         # Transaksiya ichida barcha operatsiyalarni bajarish
         with transaction.atomic():
             created_count = 0
+            updated_count = 0
             errors = []
 
             for index, row in df.iterrows():
@@ -54,13 +56,11 @@ def import_students_from_excel(file_path):
                             raise ValidationError(f"{field_name} maydoni bo'sh bo'lishi mumkin emas")
 
                     # Fakultetni yaratish yoki olish
-                    # D(3) - Fakultet nomi
                     faculty, created = Faculty.objects.get_or_create(
                         name=str(row[3]).strip()
                     )
 
                     # Mutaxassislikni yaratish yoki olish
-                    # E(4) - Mutaxassislik kodi, F(5) - Mutaxassislik nomi
                     specialization, created = Specialization.objects.get_or_create(
                         code=str(row[4]).strip(),
                         defaults={
@@ -69,25 +69,51 @@ def import_students_from_excel(file_path):
                         }
                     )
 
-                    # Talabani yaratish
-                    # A(0) - Talaba F.I.Sh, B(1) - JSHSHIR, C(2) - Talaba statusi
-                    # G(6) - Talaba kursi, H(7) - Taʼlim turi, I(8) - Taʼlim shakli
-                    # J(9) - Gruhi
-                    student = Student(
-                        full_name=str(row[0]).strip(),
-                        jshshir=str(row[1]).strip(),
-                        status=str(row[2]).strip(),
-                        specialization=specialization,
-                        course=str(row[6]).strip(),
-                        education_type=str(row[7]).strip(),
-                        education_form=str(row[8]).strip(),
-                        group=str(row[9]).strip()
-                    )
+                    # Talabani topish yoki yaratish (JSHSHIR bo'yicha)
+                    jshshir = str(row[1]).strip()
+                    try:
+                        # Mavjud talabani topish
+                        student = Student.objects.get(jshshir=jshshir)
+                        is_new = False
+
+                        # Eski ma'lumotlarni saqlab olish
+                        old_data = {
+                            'full_name': student.full_name,
+                            'status': student.status,
+                            'specialization': student.specialization,
+                            'course': student.course,
+                            'education_type': student.education_type,
+                            'education_form': student.education_form,
+                            'group': student.group
+                        }
+                    except Student.DoesNotExist:
+                        # Yangi talaba yaratish
+                        student = Student(jshshir=jshshir)
+                        is_new = True
+                        old_data = None
+
+                    # Yangi ma'lumotlarni olish
+                    new_data = {
+                        'full_name': str(row[0]).strip(),
+                        'status': str(row[2]).strip(),
+                        'specialization': specialization,
+                        'course': str(row[6]).strip(),
+                        'education_type': str(row[7]).strip(),
+                        'education_form': str(row[8]).strip(),
+                        'group': str(row[9]).strip()
+                    }
+
+                    # Talaba ma'lumotlarini yangilash
+                    student.full_name = new_data['full_name']
+                    student.status = new_data['status']
+                    student.specialization = new_data['specialization']
+                    student.course = new_data['course']
+                    student.education_type = new_data['education_type']
+                    student.education_form = new_data['education_form']
+                    student.group = new_data['group']
 
                     # Validatsiya
                     student.full_clean()
-
-                    # Saqlash
                     student.save()
 
                     # Raqamli maydonlarni tekshirish
@@ -110,29 +136,62 @@ def import_students_from_excel(file_path):
                         except (ValueError, TypeError):
                             raise ValidationError(f"{field_name} raqam bo'lishi kerak")
 
-                    # Shartnoma yaratish
-                    # K(10) - Shartnoma shakli
-                    # L(11) - Davr boshiga qoldiq DT, M(12) - Davr boshiga qoldiq KT
-                    # N(13) - Shartnoma summasi (DT), O(14) - Qaytarilgan summa (DT)
-                    # P(15) - To'langan summa (KT), Q(16) - Davr ohiriga qoldiq DT
-                    # R(17) - Davr ohiriga qoldiq KT, S(18) - To'langan summa foizda
-                    contract = Contract(
-                        student=student,
-                        contract_type=str(row[10]).strip(),
-                        initial_balance_dt=float(row[11]),
-                        initial_balance_kt=float(row[12]),
-                        period_amount_dt=float(row[13]),
-                        returned_amount_dt=float(row[14]),
-                        paid_amount_kt=float(row[15]),
-                        final_balance_dt=float(row[16]),
-                        final_balance_kt=float(row[17]),
-                        payment_percentage=float(row[18])
-                    )
+                    # Shartnomani topish yoki yaratish
+                    try:
+                        contract = Contract.objects.get(student=student)
+                        contract_old_data = {
+                            'contract_type': contract.contract_type,
+                            'initial_balance_dt': contract.initial_balance_dt,
+                            'initial_balance_kt': contract.initial_balance_kt,
+                            'period_amount_dt': contract.period_amount_dt,
+                            'returned_amount_dt': contract.returned_amount_dt,
+                            'paid_amount_kt': contract.paid_amount_kt,
+                            'final_balance_dt': contract.final_balance_dt,
+                            'final_balance_kt': contract.final_balance_kt,
+                            'payment_percentage': contract.payment_percentage
+                        }
+                    except Contract.DoesNotExist:
+                        contract = Contract(student=student)
+                        contract_old_data = None
+
+                    # Shartnoma ma'lumotlarini yangilash
+                    contract.contract_type = str(row[10]).strip()
+                    contract.initial_balance_dt = float(row[11])
+                    contract.initial_balance_kt = float(row[12])
+                    contract.period_amount_dt = float(row[13])
+                    contract.returned_amount_dt = float(row[14])
+                    contract.paid_amount_kt = float(row[15])
+                    contract.final_balance_dt = float(row[16])
+                    contract.final_balance_kt = float(row[17])
+                    contract.payment_percentage = float(row[18])
 
                     contract.full_clean()
                     contract.save()
 
-                    created_count += 1
+                    if is_new:
+                        created_count += 1
+                    else:
+                        # Faqatgina ma'lumotlari o'zgargan studentlarni hisoblash
+                        student_changed = False
+                        contract_changed = False
+
+                        # Student ma'lumotlari o'zgarganligini tekshirish
+                        if old_data:
+                            for key, old_value in old_data.items():
+                                if getattr(student, key) != old_value:
+                                    student_changed = True
+                                    break
+
+                        # Shartnoma ma'lumotlari o'zgarganligini tekshirish
+                        if contract_old_data:
+                            for key, old_value in contract_old_data.items():
+                                if getattr(contract, key) != old_value:
+                                    contract_changed = True
+                                    break
+
+                        # Agar student yoki shartnoma ma'lumotlari o'zgarganda
+                        if student_changed or contract_changed:
+                            updated_count += 1
 
                 except Exception as e:
                     # Xatolikni qayd etish
@@ -150,7 +209,8 @@ def import_students_from_excel(file_path):
             return {
                 'success': True,
                 'created_count': created_count,
-                'message': f"Muvaffaqiyatli import qilindi: {created_count} ta talaba"
+                'updated_count': updated_count,
+                'message': f"Muvaffaqiyatli import qilindi: {created_count} ta yangi, {updated_count} ta yangilandi"
             }
 
     except Exception as e:
@@ -163,6 +223,7 @@ def import_students_from_excel(file_path):
 def import_payments_from_excel(file_path):
     """
     To'lovlar excel faylidan ma'lumotlarni import qilish
+    Faqat yangi to'lovlar qo'shiladi, mavjud to'lovlar yangilanmaydi.
     """
     try:
         df = pd.read_excel(file_path, sheet_name='Лист1', header=None)
@@ -170,6 +231,7 @@ def import_payments_from_excel(file_path):
 
         with transaction.atomic():
             created_count = 0
+            skipped_count = 0
             errors = []
 
             for index, row in df.iterrows():
@@ -207,17 +269,19 @@ def import_payments_from_excel(file_path):
                         raise ValidationError("To'lov sanasi noto'g'ri formatda. Format: YYYY-MM-DD HH:MM:SS")
 
                     # Talabani topish
-                    # A(0) - JShShIR
                     student = Student.objects.get(jshshir=str(row[0]).strip())
 
-                    # To'lovni yaratish
-                    # B(1) - Shartnoma raqami, C(2) - To'lov ID
-                    # D(3) - To'lov summasi, E(4) - To'lov sanasi
-                    # F(5) - To'lov maqsadi
+                    # To'lovni topish (payment_id bo'yicha) - agar mavjud bo'lsa o'tkazib yuborish
+                    payment_id = str(row[2]).strip()
+                    if Payment.objects.filter(payment_id=payment_id).exists():
+                        skipped_count += 1
+                        continue  # Mavjud to'lovni o'tkazib yuborish
+
+                    # Yangi to'lov yaratish
                     payment = Payment(
                         student=student,
                         contract_number=str(row[1]).strip(),
-                        payment_id=str(row[2]).strip(),
+                        payment_id=payment_id,
                         amount=float(row[3]),
                         payment_date=payment_date,
                         purpose=str(row[5]).strip()
@@ -243,7 +307,8 @@ def import_payments_from_excel(file_path):
             return {
                 'success': True,
                 'created_count': created_count,
-                'message': f"Muvaffaqiyatli import qilindi: {created_count} ta to'lov"
+                'skipped_count': skipped_count,
+                'message': f"Muvaffaqiyatli import qilindi: {created_count} ta yangi to'lov qo'shildi, {skipped_count} ta mavjud to'lov o'tkazib yuborildi"
             }
 
     except Exception as e:

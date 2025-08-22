@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "data.payment",
     "data.account",
     "data.user",
+    "data.education_year",
 ]
 
 MIDDLEWARE = [
