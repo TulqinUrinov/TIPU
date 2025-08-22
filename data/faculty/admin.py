@@ -1,3 +1,13 @@
 from django.contrib import admin
 
-# Register your models here.
+from data.faculty.models import Faculty
+
+
+@admin.register(Faculty)
+class FacultyAdmin(admin.ModelAdmin):
+    list_display = (
+        'name',
+        'id',
+    )
+
+

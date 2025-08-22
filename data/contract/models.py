@@ -11,7 +11,7 @@ class Contract(BaseModel):
     student: "Student" = models.ForeignKey(
         "student.Student",
         on_delete=models.CASCADE,
-        related_name="contracts"
+        related_name="contract"
     )
 
     contract_type = models.CharField(
@@ -36,7 +36,7 @@ class Contract(BaseModel):
     period_amount_dt = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        verbose_name="Davr uchun aylanma (DT)",
+        verbose_name="Shartnoma Summasi (DT)",
         default=0
     )
 

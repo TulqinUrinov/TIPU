@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from data.common.pagination import CustomPagination
 from data.user.models import AdminUser
 from data.user.serializers import AdminUserSerializer, AdminUserLoginSerializer
 from data.common.permission import IsAuthenticatedUserType
@@ -11,6 +12,9 @@ from data.common.permission import IsAuthenticatedUserType
 class AdminUserViewSet(viewsets.ModelViewSet):
     queryset = AdminUser.objects.filter(is_archived=False)
     serializer_class = AdminUserSerializer
+    pagination_class = CustomPagination
+    permission_classes = [IsAuthenticatedUserType]
+
 
     def perform_destroy(self, instance):
         # O'chirish o'rniga soft delete qilish
