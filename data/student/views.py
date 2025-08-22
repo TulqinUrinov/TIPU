@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, filters
 
 from data.common.pagination import CustomPagination
 from data.common.permission import IsAuthenticatedUserType
@@ -11,6 +11,12 @@ class StudentEduYearListApiView(generics.ListAPIView):
     serializer_class = StudentEduYearSerializer
     pagination_class = CustomPagination
     permission_classes = [IsAuthenticatedUserType]
+    filter_backends = [filters.SearchFilter]
+    search_fields = [
+        "full_name",
+        "jshshir",
+        "user_account__phone_number",
+    ]
 
     def get_queryset(self):
         edu_year = self.kwargs.get('edu_year')

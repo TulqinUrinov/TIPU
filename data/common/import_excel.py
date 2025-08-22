@@ -7,7 +7,7 @@ import traceback
 from data.contract.models import Contract
 from data.education_year.models import EducationYear
 from data.faculty.models import Faculty
-from data.payment.models import Payment
+from data.payment.models import Payment, InstallmentPayment
 from data.specialization.models import Specialization
 from data.student.models import Student
 from data.studentedu_year.models import StudentEduYear
@@ -181,6 +181,33 @@ def import_students_from_excel(file_path, education_year):
 
                     if is_new:
                         created_count += 1
+
+                        # Avval ehtiyot uchun eski paymentlarni tozalash
+                        InstallmentPayment.objects.filter(student=student).delete()
+
+                        # Har bir qism summasi
+                        amount_per_installment = contract.period_amount_dt / 4
+
+                        # O'quv yili stringdan boshlang'ich yilni olish
+                        start_year = int(str(edu_year).split('-')[0])
+
+                        # To'lov sanalari
+                        payment_dates = [
+                            datetime(start_year, 10, 10),  # 10-oktabr
+                            datetime(start_year, 12, 10),  # 10-dekabr
+                            datetime(start_year + 1, 3, 10),  # 10-mart
+                            datetime(start_year + 1, 5, 10),  # 10-may
+                        ]
+
+                        for i, pay_date in enumerate(payment_dates, start=1):
+                            InstallmentPayment.objects.create(
+                                student=student,
+                                count=i,
+                                amount=amount_per_installment,
+                                payment_date=pay_date,
+                                left=contract.period_amount_dt
+                            )
+
                     else:
                         # Faqatgina ma'lumotlari o'zgargan studentlarni hisoblash
                         student_changed = False

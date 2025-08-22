@@ -38,3 +38,26 @@ class Payment(BaseModel):
 
     def __str__(self):
         return f"{self.student.full_name} - {self.amount} so'm"
+
+
+class InstallmentPayment(BaseModel):
+    student: "Student" = models.ForeignKey(
+        "student.Student",
+        on_delete=models.CASCADE,
+        related_name="contract_payments",
+    )
+
+    count = models.PositiveIntegerField(default=0)
+
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name="To'lov miqdori"
+    )
+
+    payment_date = models.DateTimeField(verbose_name="To'lov sanasi")
+
+    left = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name="Qolgan to'lov miqdori")

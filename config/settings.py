@@ -25,7 +25,11 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "e5b2618b7b81.ngrok-free.app",
+    "localhost",
+    "127.0.0.1",
+]
 
 # Application definition
 
@@ -40,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'rest_framework_simplejwt',
+    'corsheaders',
 
     "data.student",
     "data.faculty",
@@ -54,6 +59,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'data.common.middleware.CustomJWTMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
@@ -158,3 +164,67 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=2),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
+
+CORS_ALLOW_METHODS = (
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+    "OPTIONS",
+)
+
+CORS_ALLOW_HEADERS = (
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "ngrok-skip-browser-warning"
+)
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = [
+    "https://e5b2618b7b81.ngrok-free.app",
+    "http://91.186.197.71:8001",
+
+    "https://luxe-climate.vercel.app",
+    "https://1a892d4ac10a.ngrok-free.app",
+
+    "http://192.168.0.103:8000",
+    "http://192.168.0.103:3000",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
+    "http://127.0.0.1:3003",
+    "http://localhost:8000",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8001",
+    "https://system.tgfu.sector-soft.ru",
+    "http://system.tgfu.sector-soft.ru",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://e5b2618b7b81.ngrok-free.app",
+    "http://91.186.197.71:8001",
+
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8001",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://192.168.0.103:8000",
+    "http://192.168.0.103:3000",
+    "https://system.tgfu.sector-soft.ru",
+    "http://system.tgfu.sector-soft.ru",
+
+    "https://1a892d4ac10a.ngrok-free.app",
+    "https://luxe-climate.vercel.app",
+]
