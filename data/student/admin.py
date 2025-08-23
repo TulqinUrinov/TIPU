@@ -7,6 +7,7 @@ from data.student.models import Student
 class StudentAdmin(admin.ModelAdmin):
     list_display = (
         'full_name',
+        'id',
         'jshshir',
         'specialization',
         'course',
@@ -14,4 +15,9 @@ class StudentAdmin(admin.ModelAdmin):
         'education_form',
         'group',
 
+    )
+
+    search_fields = (
+        'full_name',
+        'jshshir',
     )

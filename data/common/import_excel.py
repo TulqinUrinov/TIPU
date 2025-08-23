@@ -4,6 +4,8 @@ from django.core.exceptions import ValidationError
 from datetime import datetime
 import traceback
 
+from django.utils import timezone
+
 from data.contract.models import Contract
 from data.education_year.models import EducationYear
 from data.faculty.models import Faculty
@@ -11,6 +13,17 @@ from data.payment.models import Payment, InstallmentPayment
 from data.specialization.models import Specialization
 from data.student.models import Student
 from data.studentedu_year.models import StudentEduYear
+
+from decimal import Decimal, ROUND_HALF_UP
+
+
+def to_decimal(value, places=2):
+    """
+    Sonni decimalga aylantirib, kerakli joygacha yaxlitlaydi.
+    Masalan: 123.4567 -> 123.46
+    """
+    return Decimal(str(value)).quantize(Decimal(f'1.{"0" * places}'), rounding=ROUND_HALF_UP)
+
 
 
 def import_students_from_excel(file_path, education_year):
@@ -167,14 +180,24 @@ def import_students_from_excel(file_path, education_year):
 
                     # Shartnoma ma'lumotlarini yangilash
                     contract.contract_type = str(row[10]).strip()
-                    contract.initial_balance_dt = float(row[11])
-                    contract.initial_balance_kt = float(row[12])
-                    contract.period_amount_dt = float(row[13])
-                    contract.returned_amount_dt = float(row[14])
-                    contract.paid_amount_kt = float(row[15])
-                    contract.final_balance_dt = float(row[16])
-                    contract.final_balance_kt = float(row[17])
-                    contract.payment_percentage = float(row[18])
+                    contract.initial_balance_dt = to_decimal(row[11])
+                    contract.initial_balance_kt = to_decimal(row[12])
+                    contract.period_amount_dt = to_decimal(row[13])
+                    contract.returned_amount_dt = to_decimal(row[14])
+                    contract.paid_amount_kt = to_decimal(row[15])
+                    contract.final_balance_dt = to_decimal(row[16])
+                    contract.final_balance_kt = to_decimal(row[17])
+                    contract.payment_percentage = to_decimal(row[18], places=2)
+
+                    # contract.contract_type = str(row[10]).strip()
+                    # contract.initial_balance_dt = float(row[11])
+                    # contract.initial_balance_kt = float(row[12])
+                    # contract.period_amount_dt = float(row[13])
+                    # contract.returned_amount_dt = float(row[14])
+                    # contract.paid_amount_kt = float(row[15])
+                    # contract.final_balance_dt = float(row[16])
+                    # contract.final_balance_kt = float(row[17])
+                    # contract.payment_percentage = float(row[18])
 
                     contract.full_clean()
                     contract.save()
@@ -182,31 +205,38 @@ def import_students_from_excel(file_path, education_year):
                     if is_new:
                         created_count += 1
 
-                        # Avval ehtiyot uchun eski paymentlarni tozalash
+                        # Eski paymentlarni o'chirish
                         InstallmentPayment.objects.filter(student=student).delete()
 
-                        # Har bir qism summasi
-                        amount_per_installment = contract.period_amount_dt / 4
+                        contract = student.contract.first()
+                        if not contract:
+                            raise ValueError("Student uchun contract topilmadi.")
 
-                        # O'quv yili stringdan boshlang'ich yilni olish
+                        amount_per_split = contract.period_amount_dt / 4
                         start_year = int(str(edu_year).split('-')[0])
 
-                        # To'lov sanalari
+                        # Default avtomatik sanalar
                         payment_dates = [
-                            datetime(start_year, 10, 10),  # 10-oktabr
-                            datetime(start_year, 12, 10),  # 10-dekabr
-                            datetime(start_year + 1, 3, 10),  # 10-mart
-                            datetime(start_year + 1, 5, 10),  # 10-may
+                            datetime(start_year, 10, 10),
+                            datetime(start_year, 12, 10),
+                            datetime(start_year + 1, 3, 10),
+                            datetime(start_year + 1, 5, 10),
                         ]
 
-                        for i, pay_date in enumerate(payment_dates, start=1):
-                            InstallmentPayment.objects.create(
-                                student=student,
-                                count=i,
-                                amount=amount_per_installment,
-                                payment_date=pay_date,
-                                left=contract.period_amount_dt
-                            )
+                        # Splits tayyorlash
+                        installment_payments = []
+                        for payment_date in payment_dates:
+                            installment_payments.append({
+                                "amount": str(amount_per_split),
+                                "payment_date": payment_date.strftime("%Y-%m-%d")
+                            })
+
+                        # Installment yaratish
+                        InstallmentPayment.objects.create(
+                            student=student,
+                            installment_count=4,  # faqat 4 bo‘ladi
+                            installment_payments=installment_payments
+                        )
 
                     else:
                         # Faqatgina ma'lumotlari o'zgargan studentlarni hisoblash
@@ -260,97 +290,187 @@ def import_students_from_excel(file_path, education_year):
 
 def import_payments_from_excel(file_path):
     """
-    To'lovlar excel faylidan ma'lumotlarni import qilish
+    To'lovlar excel faylidan ma'lumotlarni import qilish.
     Faqat yangi to'lovlar qo'shiladi, mavjud to'lovlar yangilanmaydi.
+    Agar bitta qator xato bo'lsa ham – hammasi rollback qilinadi.
     """
-    try:
-        df = pd.read_excel(file_path, sheet_name='Лист1', header=None)
-        df = df.dropna(how='all')
 
-        with transaction.atomic():
-            created_count = 0
-            skipped_count = 0
-            errors = []
+    df = pd.read_excel(file_path, sheet_name='Лист1', header=None)
+    df = df.dropna(how='all')
 
-            for index, row in df.iterrows():
-                try:
-                    # Header qatorini o'tkazib yuborish (0-qator)
-                    if index == 0:
-                        continue
+    print("Sasdfdgfdfg")
 
-                    # Majburiy maydonlarni tekshirish
-                    required_fields = [
-                        (0, "JShShIR"),
-                        (1, "Shartnoma raqami"),
-                        (2, "To'lov ID"),
-                        (3, "To'lov summasi"),
-                        (4, "To'lov sanasi"),
-                        (5, "To'lov maqsadi")
-                    ]
+    with transaction.atomic():  # rollback uchun
+        created_count = 0
+        skipped_count = 0
 
-                    for col_index, field_name in required_fields:
-                        if pd.isna(row[col_index]) or str(row[col_index]).strip() == "":
-                            raise ValidationError(f"{field_name} maydoni bo'sh bo'lishi mumkin emas")
+        for index, row in df.iterrows():
+            # Header qatorini o'tkazib yuborish (0-qator)
+            if index == 0:
+                continue
 
-                    # Raqamli maydonlarni tekshirish
-                    if pd.isna(row[3]):
-                        raise ValidationError("To'lov summasi bo'sh bo'lishi mumkin emas")
-                    try:
-                        float(row[3])
-                    except (ValueError, TypeError):
-                        raise ValidationError("To'lov summasi raqam bo'lishi kerak")
+            # Majburiy maydonlarni tekshirish
+            required_fields = [
+                (0, "JShShIR"),
+                (1, "Shartnoma raqami"),
+                (2, "To'lov ID"),
+                (3, "To'lov summasi"),
+                (4, "To'lov sanasi"),
+                (5, "To'lov maqsadi")
+            ]
+            for col_index, field_name in required_fields:
+                if pd.isna(row[col_index]) or str(row[col_index]).strip() == "":
+                    raise ValidationError(f"Qator {index + 1}: {field_name} bo'sh bo'lishi mumkin emas")
 
-                    # Sana formatini tekshirish
-                    try:
-                        payment_date = datetime.strptime(str(row[4]), '%Y-%m-%d %H:%M:%S')
-                    except ValueError:
-                        raise ValidationError("To'lov sanasi noto'g'ri formatda. Format: YYYY-MM-DD HH:MM:SS")
+            # To'lov summasi
+            try:
+                # amount = Decimal(str(row[3])).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                amount = to_decimal(row[3])
 
-                    # Talabani topish
-                    student = Student.objects.get(jshshir=str(row[0]).strip())
+            except (ValueError, TypeError):
+                raise ValidationError(f"Qator {index + 1}: To'lov summasi noto'g'ri formatda")
 
-                    # To'lovni topish (payment_id bo'yicha) - agar mavjud bo'lsa o'tkazib yuborish
-                    payment_id = str(row[2]).strip()
-                    if Payment.objects.filter(payment_id=payment_id).exists():
-                        skipped_count += 1
-                        continue  # Mavjud to'lovni o'tkazib yuborish
+            # # Sana
+            # try:
+            #     payment_date = datetime.strptime(str(row[4]), '%Y-%m-%d %H:%M:%S')
+            # except ValueError:
+            #     raise ValidationError(f"Qator {index + 1}: To'lov sanasi noto'g'ri formatda (YYYY-MM-DD HH:MM:SS)")
 
-                    # Yangi to'lov yaratish
-                    payment = Payment(
-                        student=student,
-                        contract_number=str(row[1]).strip(),
-                        payment_id=payment_id,
-                        amount=float(row[3]),
-                        payment_date=payment_date,
-                        purpose=str(row[5]).strip()
-                    )
+            try:
+                payment_date = datetime.strptime(str(row[4]), '%Y-%m-%d %H:%M:%S')
+                payment_date = timezone.make_aware(payment_date)  # <-- muhim o'zgarish
+            except ValueError:
+                raise ValidationError(f"Qator {index + 1}: To'lov sanasi noto'g'ri formatda (YYYY-MM-DD HH:MM:SS)")
 
-                    payment.full_clean()
-                    payment.save()
-                    created_count += 1
+            # Talaba
+            try:
+                student = Student.objects.get(jshshir=str(row[0]).strip())
+            except Student.DoesNotExist:
+                raise ValidationError(f"Qator {index + 1}: JSHSHIR {row[0]} bo'yicha talaba topilmadi")
 
-                except Student.DoesNotExist:
-                    error_msg = f"Qator {index + 1}: JSHSHIR {row[0]} bo'yicha talaba topilmadi"
-                    errors.append(error_msg)
-                except Exception as e:
-                    error_msg = f"Qator {index + 1}: {str(e)}"
-                    errors.append(error_msg)
-                    print(f"Xato: {error_msg}")
-                    print(traceback.format_exc())
+            # Dublikat to'lovni tekshirish
+            payment_id = str(row[2]).strip()
+            if Payment.objects.filter(payment_id=payment_id).exists():
+                skipped_count += 1
+                continue  # mavjud to‘lovni tashlab ketamiz
 
-            if errors:
-                error_message = "\n".join(errors)
-                raise ValidationError(f"To'lovlar importida xatoliklar:\n{error_message}")
+            # Yangi to'lov yaratish
+            payment = Payment(
+                student=student,
+                contract_number=str(row[1]).strip(),
+                payment_id=payment_id,
+                amount=amount,
+                payment_date=payment_date,
+                purpose=str(row[5]).strip()
+            )
+            payment.full_clean()
+            payment.save()
+            created_count += 1
 
-            return {
-                'success': True,
-                'created_count': created_count,
-                'skipped_count': skipped_count,
-                'message': f"Muvaffaqiyatli import qilindi: {created_count} ta yangi to'lov qo'shildi, {skipped_count} ta mavjud to'lov o'tkazib yuborildi"
-            }
-
-    except Exception as e:
         return {
-            'success': False,
-            'message': f"To'lovlar importida xato: {str(e)}"
+            'success': True,
+            'created_count': float(created_count),
+            'skipped_count': float(skipped_count),
+            'message': f"Muvaffaqiyatli import qilindi: {created_count} ta yangi to'lov qo'shildi, "
+                       f"{skipped_count} ta mavjud to'lov o'tkazib yuborildi"
         }
+
+# def import_payments_from_excel(file_path):
+#     """
+#     To'lovlar excel faylidan ma'lumotlarni import qilish
+#     Faqat yangi to'lovlar qo'shiladi, mavjud to'lovlar yangilanmaydi.
+#     """
+#     try:
+#         df = pd.read_excel(file_path, sheet_name='Лист1', header=None)
+#         df = df.dropna(how='all')
+#
+#         with transaction.atomic():
+#             created_count = 0
+#             skipped_count = 0
+#             errors = []
+#
+#             for index, row in df.iterrows():
+#                 try:
+#                     # Header qatorini o'tkazib yuborish (0-qator)
+#                     if index == 0:
+#                         continue
+#
+#                     # Majburiy maydonlarni tekshirish
+#                     required_fields = [
+#                         (0, "JShShIR"),
+#                         (1, "Shartnoma raqami"),
+#                         (2, "To'lov ID"),
+#                         (3, "To'lov summasi"),
+#                         (4, "To'lov sanasi"),
+#                         (5, "To'lov maqsadi")
+#                     ]
+#
+#                     for col_index, field_name in required_fields:
+#                         if pd.isna(row[col_index]) or str(row[col_index]).strip() == "":
+#                             raise ValidationError(f"{field_name} maydoni bo'sh bo'lishi mumkin emas")
+#
+#                     # Raqamli maydonlarni tekshirish
+#                     if pd.isna(row[3]):
+#                         raise ValidationError("To'lov summasi bo'sh bo'lishi mumkin emas")
+#                     try:
+#                         # float(row[3])
+#                         amount = Decimal(str(row[3])).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+#
+#                     except (ValueError, TypeError):
+#                         raise ValidationError("To'lov summasi raqam bo'lishi kerak")
+#
+#                     # Sana formatini tekshirish
+#                     try:
+#                         payment_date = datetime.strptime(str(row[4]), '%Y-%m-%d %H:%M:%S')
+#                     except ValueError:
+#                         raise ValidationError("To'lov sanasi noto'g'ri formatda. Format: YYYY-MM-DD HH:MM:SS")
+#
+#                     # Talabani topish
+#                     student = Student.objects.get(jshshir=str(row[0]).strip())
+#
+#                     # To'lovni topish (payment_id bo'yicha) - agar mavjud bo'lsa o'tkazib yuborish
+#                     payment_id = str(row[2]).strip()
+#                     if Payment.objects.filter(payment_id=payment_id).exists():
+#                         skipped_count += 1
+#                         continue  # Mavjud to'lovni o'tkazib yuborish
+#
+#                     # Yangi to'lov yaratish
+#                     payment = Payment(
+#                         student=student,
+#                         contract_number=str(row[1]).strip(),
+#                         payment_id=payment_id,
+#                         amount=amount,
+#                         # amount=float(row[3]),
+#                         payment_date=payment_date,
+#                         purpose=str(row[5]).strip()
+#                     )
+#
+#                     payment.full_clean()
+#                     payment.save()
+#                     created_count += 1
+#
+#                 except Student.DoesNotExist:
+#                     error_msg = f"Qator {index + 1}: JSHSHIR {row[0]} bo'yicha talaba topilmadi"
+#                     errors.append(error_msg)
+#                 except Exception as e:
+#                     error_msg = f"Qator {index + 1}: {str(e)}"
+#                     errors.append(error_msg)
+#                     print(f"Xato: {error_msg}")
+#                     print(traceback.format_exc())
+#
+#             if errors:
+#                 error_message = "\n".join(errors)
+#                 raise ValidationError(f"To'lovlar importida xatoliklar:\n{error_message}")
+#
+#             return {
+#                 'success': True,
+#                 'created_count': created_count,
+#                 'skipped_count': skipped_count,
+#                 'message': f"Muvaffaqiyatli import qilindi: {created_count} ta yangi to'lov qo'shildi, {skipped_count} ta mavjud to'lov o'tkazib yuborildi"
+#             }
+#
+#     except Exception as e:
+#         return {
+#             'success': False,
+#             'message': f"To'lovlar importida xato: {str(e)}"
+#         }

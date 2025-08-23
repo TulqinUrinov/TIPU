@@ -81,37 +81,37 @@ class ImportPaymentsAPIView(APIView):
                 tmp_file.write(chunk)
             tmp_file_path = tmp_file.name
 
-        try:
-            # Import qilish
-            result = import_payments_from_excel(tmp_file_path)
+        # try:
+        # Import qilish
+        result = import_payments_from_excel(tmp_file_path)
 
-            # Vaqtincha faylni o'chirish
-            os.unlink(tmp_file_path)
+        # Vaqtincha faylni o'chirish
+        os.unlink(tmp_file_path)
 
-            if result['success']:
-                return Response(
-                    {
-                        'success': True,
-                        'message': result['message'],
-                        'created_count': result['created_count']
-                    },
-                    status=status.HTTP_201_CREATED
-                )
-            else:
-                return Response(
-                    {
-                        'success': False,
-                        'error': result['message']
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-        except Exception as e:
-            # Agar fayl mavjud bo'lsa, o'chirish
-            if os.path.exists(tmp_file_path):
-                os.unlink(tmp_file_path)
-
+        if result['success']:
             return Response(
-                {'error': f'Import jarayonida xato: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {
+                    'success': True,
+                    'message': result['message'],
+                    'created_count': result['created_count']
+                },
+                status=status.HTTP_201_CREATED
             )
+        else:
+            return Response(
+                {
+                    'success': False,
+                    'error': result['message']
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # except Exception as e:
+        #     # Agar fayl mavjud bo'lsa, o'chirish
+        #     if os.path.exists(tmp_file_path):
+        #         os.unlink(tmp_file_path)
+        #
+        #     return Response(
+        #         {'error': f'Import jarayonida xato: {str(e)}'},
+        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        #     )

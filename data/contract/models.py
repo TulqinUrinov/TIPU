@@ -1,7 +1,11 @@
+from decimal import Decimal
+
 from django.db import models
 from typing import TYPE_CHECKING
 
 from data.common.models import BaseModel
+
+from data.payment.models import InstallmentPayment
 
 if TYPE_CHECKING:
     from data.student.models import Student
@@ -78,4 +82,162 @@ class Contract(BaseModel):
     def __str__(self):
         return f"{self.student.full_name} - {self.contract_type}"
 
+    def recalculate_contract(self):
+        student = self.student
 
+        # 1. Umumiy kontrakt summasini hisoblash (boshlang'ich balansni hisobga olib)
+        umumiy_summasi = (
+                self.period_amount_dt
+                + self.initial_balance_dt
+                - self.initial_balance_kt
+        )
+
+        # 2. Barcha installmentsni reset qilish
+        installments = student.contract_payments.all()
+        for inst in installments:
+            updated_splits = []
+            for split in inst.installment_payments:
+                split["left"] = Decimal(split["amount"])  # boshlang'ichda amount = left
+                updated_splits.append(split)
+
+            # Decimal bo'lgan dictlarni floatga aylantirish
+            inst.installment_payments = decimal_to_float(updated_splits)
+            inst.left = float(sum(Decimal(s["left"]) for s in updated_splits))
+
+            # signalni chaqirmasdan update
+            InstallmentPayment.objects.filter(id=inst.id).update(
+                installment_payments=inst.installment_payments,
+                left=inst.left
+            )
+            # inst.installment_payments = updated_splits
+            # inst.left = sum(Decimal(s["left"]) for s in updated_splits)  # umumiy left
+
+            # inst.save()
+            # inst.save(update_fields=["installment_payments", "left"])
+
+            # signalni chaqirmasdan update
+            # InstallmentPayment.objects.filter(id=inst.id).update(
+            #     installment_payments=updated_splits,
+            #     left=inst.left
+            # )
+
+        # 3. Barcha paymentsni qo'llash
+        payments = student.payments.order_by("payment_date")
+        for payment in payments:
+            amount = Decimal(payment.amount)
+            for inst in installments:
+                splits = inst.installment_payments
+                updated_splits = []
+                for split in splits:
+                    if amount <= 0:
+                        updated_splits.append(split)
+                        continue
+
+                    left_val = Decimal(split.get("left", split["amount"]))
+                    if left_val <= 0:
+                        updated_splits.append(split)
+                        continue
+
+                    if amount >= left_val:
+                        amount -= left_val
+                        split["left"] = 0
+                    else:
+                        split["left"] = left_val - amount
+                        amount = 0
+                    updated_splits.append(split)
+
+                # Decimal bo'lgan dictlarni floatga aylantirish
+                inst.installment_payments = decimal_to_float(updated_splits)
+                inst.left = float(sum(Decimal(s["left"]) for s in updated_splits))
+
+                # signalni chaqirmasdan update
+                InstallmentPayment.objects.filter(id=inst.id).update(
+                    installment_payments=inst.installment_payments,
+                    left=inst.left)
+
+                # inst.installment_payments = updated_splits
+                # inst.left = sum(Decimal(s["left"]) for s in updated_splits)
+                # # inst.save()
+                # # inst.save(update_fields=["installment_payments", "left"])
+                #
+                # # signalni chaqirmasdan update
+                # InstallmentPayment.objects.filter(id=inst.id).update(
+                #     installment_payments=updated_splits,
+                #     left=inst.left
+                # )
+
+        # 4. Contractni yangilash
+        total_paid = sum(Decimal(p.amount) for p in payments)
+        self.paid_amount_kt = total_paid
+        self.final_balance_dt = umumiy_summasi - total_paid
+        self.payment_percentage = (
+            (total_paid / umumiy_summasi) * 100 if umumiy_summasi > 0 else 0
+        )
+        self.save()
+
+    # def recalculate_contract(self):
+    #     student = self.student
+    #
+    #     # 1. Umumiy kontrakt summasini hisoblash (boshlang'ich balansni hisobga olib)
+    #     umumiy_summasi = (
+    #             self.period_amount_dt
+    #             + self.initial_balance_dt
+    #             - self.initial_balance_kt
+    #     )
+    #
+    #     # 2. Barcha installmentsni reset qilish
+    #     installments = student.contract_payments.order_by("installment_count")
+    #     for inst in installments:
+    #         inst.left = inst.amount
+    #         inst.save()
+    #
+    #     # 3. Barcha paymentsni qo'llash
+    #     payments = student.payments.order_by("payment_date")
+    #     for payment in payments:
+    #         amount = payment.amount
+    #         for inst in installments:
+    #             if inst.left <= 0:
+    #                 continue
+    #             if amount >= inst.left:
+    #                 amount -= inst.left
+    #                 inst.left = 0
+    #                 inst.save()
+    #             else:
+    #                 inst.left -= amount
+    #                 inst.save()
+    #                 amount = 0
+    #                 break
+    #
+    #     # 4. Contractni yangilash
+    #     total_paid = sum(p.amount for p in payments)
+    #     self.paid_amount_kt = total_paid
+    #     self.final_balance_dt = umumiy_summasi - total_paid
+    #     self.payment_percentage = (total_paid / umumiy_summasi) * 100 if umumiy_summasi > 0 else 0
+    #     self.save()
+
+
+class ContractBalance(BaseModel):
+    contract = models.ForeignKey(
+        "contract.Contract",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="balances"
+    )
+    change = models.DecimalField(max_digits=15, decimal_places=2,
+                                 default=0)  # o'zgarish (to'lov qo'shilsa +, qaytarilsa -)
+    final_balance = models.DecimalField(max_digits=15, decimal_places=2, default=0)  # yakuniy balans
+
+
+from decimal import Decimal
+
+
+def decimal_to_float(obj):
+    """Recursive converter: Decimal → float"""
+    if isinstance(obj, list):
+        return [decimal_to_float(x) for x in obj]
+    elif isinstance(obj, dict):
+        return {k: decimal_to_float(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        return float(obj)  # yoki str(obj) agar matn ko‘rinishda saqlashni xohlasang
+    return obj

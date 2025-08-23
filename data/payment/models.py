@@ -1,6 +1,8 @@
 from django.db import models
 from typing import TYPE_CHECKING
 
+from django.db.models import JSONField
+
 from data.common.models import BaseModel
 
 if TYPE_CHECKING:
@@ -36,28 +38,17 @@ class Payment(BaseModel):
     payment_date = models.DateTimeField(verbose_name="To'lov sanasi")
     purpose = models.TextField(verbose_name="To'lov maqsadi")
 
-    def __str__(self):
-        return f"{self.student.full_name} - {self.amount} so'm"
-
 
 class InstallmentPayment(BaseModel):
-    student: "Student" = models.ForeignKey(
+    student = models.ForeignKey(
         "student.Student",
         on_delete=models.CASCADE,
-        related_name="contract_payments",
+        related_name="contract_payments"
     )
+    installment_count = models.PositiveIntegerField(default=4)
+    installment_payments = JSONField(default=list)  # bu yerda hamma splits saqlanadi
 
-    count = models.PositiveIntegerField(default=0)
+    left = models.DecimalField(max_digits=15, decimal_places=2, default=0)
 
-    amount = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
-        verbose_name="To'lov miqdori"
-    )
-
-    payment_date = models.DateTimeField(verbose_name="To'lov sanasi")
-
-    left = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
-        verbose_name="Qolgan to'lov miqdori")
+    def __str__(self):
+        return f"{self.student} - {self.installment_count} parts"
