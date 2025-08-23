@@ -3,7 +3,7 @@ from rest_framework import generics, filters
 from data.common.pagination import CustomPagination
 from data.common.permission import IsAuthenticatedUserType
 from data.student.models import Student
-from data.student.serializers import StudentEduYearSerializer
+from data.student.serializers import StudentEduYearSerializer, StudentSerializer
 
 
 # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
@@ -21,3 +21,9 @@ class StudentEduYearListApiView(generics.ListAPIView):
     def get_queryset(self):
         edu_year = self.kwargs.get('edu_year')
         return Student.objects.filter(student_years__education_year_id=edu_year)
+
+
+class StudentGetApiView(generics.RetrieveAPIView):
+    queryset = Student.objects.filter(is_archived=False)
+    serializer_class = StudentSerializer
+    permission_classes = [IsAuthenticatedUserType]

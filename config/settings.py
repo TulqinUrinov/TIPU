@@ -26,9 +26,10 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "e5b2618b7b81.ngrok-free.app",
+    "1dcbe9b6e5b6.ngrok-free.app",
     "localhost",
     "127.0.0.1",
+    'alter-payment.vercel.app',
 ]
 
 # Application definition
@@ -188,11 +189,11 @@ CORS_ALLOW_HEADERS = (
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
-    "https://e5b2618b7b81.ngrok-free.app",
+    "https://alter-payment.vercel.app",
+    "https://1dcbe9b6e5b6.ngrok-free.app",
     "http://91.186.197.71:8001",
 
     "https://luxe-climate.vercel.app",
-    "https://1a892d4ac10a.ngrok-free.app",
 
     "http://192.168.0.103:8000",
     "http://192.168.0.103:3000",
@@ -213,7 +214,8 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://e5b2618b7b81.ngrok-free.app",
+    "https://alter-payment.vercel.app",
+    "https://1dcbe9b6e5b6.ngrok-free.app",
     "http://91.186.197.71:8001",
 
     "http://127.0.0.1:8000",

@@ -34,3 +34,43 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
     def get_total_paid(self, obj: Student):
         total_paid = Payment.objects.filter(student=obj).aggregate(total=Sum("amount"))["total"]
         return total_paid or 0
+
+
+class StudentSerializer(serializers.ModelSerializer):
+    specialization = serializers.SerializerMethodField()
+    phone_number = serializers.SerializerMethodField()
+    contract = serializers.SerializerMethodField()
+    total_paid = serializers.SerializerMethodField()
+    left = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Student
+        fields = (
+            'id',
+            'full_name',
+            'specialization',
+            'phone_number',
+            'group',
+            'contract',
+            'total_paid',
+            'left',
+        )
+
+    def get_phone_number(self, obj: Student) -> str:
+        if hasattr(obj, "user_account"):
+            return obj.user_account.phone_number
+        return None
+
+    def get_specialization(self, obj: Student):
+        return obj.specialization.name
+
+    def get_contract(self, obj: Student):
+        contract = obj.contract.first()
+        return contract.period_amount_dt if contract else None
+
+    def get_total_paid(self, obj: Student):
+        total_paid = Payment.objects.filter(student=obj).aggregate(total=Sum("amount"))["total"]
+        return total_paid or 0
+
+    def get_left(self, obj: Student):
+        return obj.contract_payments.aggregate(total_left=Sum('left'))['total_left'] or 0
