@@ -31,7 +31,8 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     'alter-payment.vercel.app',
-    "5.129.201.121"
+    "5.129.201.121",
+    "mt.sector-soft.ru"
 ]
 
 # Application definition
@@ -193,6 +194,7 @@ CORS_ALLOW_HEADERS = (
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
+    "https://mt.sector-soft.ru",
     "http://5.129.201.121:8000",
     "https://alter-payment.vercel.app",
     "https://1dcbe9b6e5b6.ngrok-free.app",
@@ -219,6 +221,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://mt.sector-soft.ru",
     "http://5.129.201.121:8000",
     "https://alter-payment.vercel.app",
     "https://1dcbe9b6e5b6.ngrok-free.app",
