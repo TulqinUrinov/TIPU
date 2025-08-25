@@ -29,6 +29,4 @@ def send_payment_reminders():
                 )
 
                 sms_client.send_sms(phone_number, message)
-                print("📩 To'lov eslatmalari yuborildi!")
-
 
