@@ -3,13 +3,8 @@ import os
 from random import randint
 import time
 
-import requests
 from requests import post
 from icecream import ic
-# from dotenv import load_dotenv
-#
-# # .env faylni yuklab olamiz
-# load_dotenv()
 
 
 class SayqalSms:
@@ -58,10 +53,3 @@ class SayqalSms:
         ic("Sms response", data, response.text)
 
         return response
-
-
-if __name__ == "__main__":
-    sms = SayqalSms()
-    response = sms.send_sms("+998935096115", message="Salom bu test")
-
-    print(response)

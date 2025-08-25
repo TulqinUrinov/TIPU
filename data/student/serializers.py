@@ -112,3 +112,10 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
         return paid_students
 
 
+# Send sms for choosen students
+class SendSmsSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    students = serializers.ListField(
+        child=serializers.CharField(),  # JShShIR
+        allow_empty=False,
+    )
