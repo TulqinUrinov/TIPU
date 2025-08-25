@@ -13,6 +13,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 from decouple import config
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -27,10 +28,10 @@ SECRET_KEY = config("SECRET_KEY")
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "1dcbe9b6e5b6.ngrok-free.app",
     "localhost",
     "127.0.0.1",
     'alter-payment.vercel.app',
+    "5.129.201.121"
 ]
 
 # Application definition
@@ -192,6 +193,7 @@ CORS_ALLOW_HEADERS = (
 CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
+    "http://5.129.201.121:8000",
     "https://alter-payment.vercel.app",
     "https://1dcbe9b6e5b6.ngrok-free.app",
     "http://91.186.197.71:8001",
@@ -217,6 +219,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
+    "http://5.129.201.121:8000",
     "https://alter-payment.vercel.app",
     "https://1dcbe9b6e5b6.ngrok-free.app",
     "http://91.186.197.71:8001",
