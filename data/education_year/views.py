@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 
 from data.common.pagination import CustomPagination
 from data.common.permission import IsAuthenticatedUserType
@@ -11,3 +11,5 @@ class EducationYearViewSet(viewsets.ModelViewSet):
     serializer_class = EducationYearSerializer
     pagination_class = CustomPagination
     permission_classes = [IsAuthenticatedUserType]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["edu_year"]

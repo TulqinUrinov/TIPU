@@ -36,6 +36,7 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
         return total_paid or 0
 
 
+# Retrieve
 class StudentSerializer(serializers.ModelSerializer):
     specialization = serializers.SerializerMethodField()
     phone_number = serializers.SerializerMethodField()
@@ -74,3 +75,40 @@ class StudentSerializer(serializers.ModelSerializer):
 
     def get_left(self, obj: Student):
         return obj.contract_payments.aggregate(total_left=Sum('left'))['total_left'] or 0
+
+
+# Statistics
+class StudentStatisticsSerializer(serializers.ModelSerializer):
+    total_students = serializers.SerializerMethodField()
+    debt_students = serializers.SerializerMethodField()
+    paid_students = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Student
+        fields = (
+            "total_students",
+            "debt_students",
+            "paid_students",
+        )
+
+    def get_total_students(self, obj: Student) -> int:
+        total_students = Student.objects.filter(is_archived=False).count()
+        return total_students
+
+    def get_debt_students(self, obj):
+        # Qarzdor: InstallmentPayment.left > 0
+        debt_students = Student.objects.filter(
+            is_archived=False,
+            contract_payments__left__gt=0
+        ).distinct().count()
+        return debt_students
+
+    def get_paid_students(self, obj):
+        # To‘liq to‘lagan: InstallmentPayment.left == 0
+        paid_students = Student.objects.filter(
+            is_archived=False,
+            contract_payments__left=0
+        ).distinct().count()
+        return paid_students
+
+
