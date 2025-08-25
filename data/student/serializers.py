@@ -118,4 +118,6 @@ class SendSmsSerializer(serializers.Serializer):
     students = serializers.ListField(
         child=serializers.CharField(),  # JShShIR
         allow_empty=False,
+        required=False,
     )
+    send_all = serializers.BooleanField(required=False, default=False)
