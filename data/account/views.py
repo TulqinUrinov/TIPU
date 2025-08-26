@@ -56,12 +56,12 @@ class StudentUserLoginAPIView(APIView):
             # JWT token yaratish
             refresh = RefreshToken.for_user(student_user)
             refresh['role'] = 'STUDENT'
-            refresh['student_user_id'] = str(student_user.student.id)
+            refresh['student_user_id'] = str(student_user.id)
 
             # Access tokenga ham qo‘shish
             access = refresh.access_token
             access['role'] = 'STUDENT'
-            access['student_user_id'] = str(student_user.student.id)
+            access['student_user_id'] = str(student_user.id)
 
             return Response({
                 'access': str(access),

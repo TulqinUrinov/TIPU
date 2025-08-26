@@ -20,13 +20,10 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
     serializer_class = InstallmentPaymentSerializer
     permission_classes = [IsAuthenticatedUserType]
 
-
     def get_queryset(self):
         # STUDENT faqat o'zini ko'rsin
         if getattr(self.request, "role", None) == "STUDENT" and self.request.student_user:
-            student = Student.objects.filter(user_account=self.request.student_user).first()
-            if not student:
-                raise PermissionDenied({"detail": "User not found", "code": "user_not_found"})
+            student = self.request.student_user.student
             return InstallmentPayment.objects.filter(student=student)
 
         # ADMIN barchasini ko'rishi yoki student_id bo'yicha filter

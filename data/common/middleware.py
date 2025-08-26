@@ -28,6 +28,7 @@ class CustomJWTMiddleware:
                     request.role = "ADMIN"
 
                 elif role == "STUDENT":
+                    # student_id = payload.get("student_user_id")
                     student_id = payload.get("student_user_id")
                     request.student_user = StudentUser.objects.filter(id=student_id).first()
                     request.role = "STUDENT"
