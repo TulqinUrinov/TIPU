@@ -1,7 +1,7 @@
 from django.db.models import Sum
 from rest_framework import serializers
 
-from data.payment.models import Payment
+from data.payment.models import Payment, InstallmentPayment
 from data.student.models import Student
 
 
@@ -10,6 +10,7 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
     phone_number = serializers.SerializerMethodField()
     contract = serializers.SerializerMethodField()
     total_paid = serializers.SerializerMethodField()
+    left = serializers.SerializerMethodField()
 
     class Meta:
         model = Student
@@ -20,6 +21,7 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
             'phone_number',
             'contract',
             'total_paid',
+            'left',
         )
 
     def get_phone_number(self, obj: Student) -> str:
@@ -34,6 +36,10 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
     def get_total_paid(self, obj: Student):
         total_paid = Payment.objects.filter(student=obj).aggregate(total=Sum("amount"))["total"]
         return total_paid or 0
+
+    def get_left(self, obj: Student):
+        left = InstallmentPayment.objects.filter(student=obj).aggregate(total=Sum("left"))["total"]
+        return left
 
 
 # Retrieve

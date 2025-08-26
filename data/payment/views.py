@@ -41,7 +41,7 @@ class PaymentHistoryApiView(generics.ListAPIView):
             return Payment.objects.filter(student=student).order_by("-payment_date")
 
         queryset = Payment.objects.all().order_by("-payment_date")
-        student_id = self.request.GET.get("student")
-        if student_id:
-            return queryset.filter(student_id=student_id).order_by("-payment_date")
+        student_jshshir = self.request.GET.get("student")
+        if student_jshshir:
+            return queryset.filter(student__jshshir=student_jshshir).order_by("-payment_date")
         return queryset

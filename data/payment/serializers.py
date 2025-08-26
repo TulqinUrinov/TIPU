@@ -20,6 +20,7 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
         fields = (
+            'id',
             'payment_id',
             'amount',
             'payment_date',

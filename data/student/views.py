@@ -27,10 +27,11 @@ class StudentEduYearListApiView(generics.ListAPIView):
         edu_year = self.kwargs.get('edu_year')
         course = self.request.query_params.get('course')
 
-        if course:
-            return Student.objects.filter(course=course, edu_year=edu_year)
+        queryset = Student.objects.filter(student_years__education_year_id=edu_year)
 
-        return Student.objects.filter(student_years__education_year_id=edu_year)
+        if course:
+            queryset = queryset.filter(course=course)
+        return queryset
 
 
 # Retrieve
