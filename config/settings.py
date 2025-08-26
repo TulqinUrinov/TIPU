@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "data.education_year",
     "data.studentedu_year",
     "sms",
+    "data.comment",
 ]
 
 MIDDLEWARE = [
