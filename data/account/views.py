@@ -16,6 +16,7 @@ class StudentUserRegisterAPIView(APIView):
 
         if serializer.is_valid():
             student_user = serializer.save()
+            print(student_user.id)
 
             # Registratsiyadan so'ng avtomatik token yaratish
             refresh = RefreshToken.for_user(student_user)
@@ -44,6 +45,7 @@ class StudentUserLoginAPIView(APIView):
 
         if serializer.is_valid():
             student_user = serializer.validated_data['student_user']
+            print(student_user.id)
 
             if student_user.is_archived:
                 return Response({
