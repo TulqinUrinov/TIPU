@@ -22,4 +22,4 @@ class StudentCommentsListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         student_id = self.kwargs['student_id']
-        return Comment.objects.filter(student_id=student_id).select_related('user', 'student')
+        return Comment.objects.filter(student_id=student_id).select_related('user', 'student').order_by('created_at')
