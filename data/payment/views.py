@@ -21,7 +21,7 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedUserType]
 
     def get_queryset(self):
-        # STUDENT faqat o'zini ko'rsin
+        # Agar student bo‘lsa faqat o‘zini ko‘rsin
         if getattr(self.request, "role", None) == "STUDENT" and self.request.student_user:
             student = self.request.student_user.student
             return InstallmentPayment.objects.filter(student=student)

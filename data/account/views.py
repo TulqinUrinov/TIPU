@@ -101,7 +101,6 @@ class JWTtokenRefresh(APIView):
 
 class StudentMeAPIView(APIView):
     permission_classes = [IsAuthenticatedUserType]
-    authentication_classes = []  # DRF default authni o‘chiradi
 
     def get(self, request):
         student_user = getattr(request, 'student_user', None)
