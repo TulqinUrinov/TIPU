@@ -38,8 +38,16 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
         return total_paid or 0
 
     def get_left(self, obj: Student):
-        left = InstallmentPayment.objects.filter(student=obj).aggregate(total=Sum("left"))["total"]
-        return left
+        # kontrakt summasi
+        contract = obj.contract.first()
+        contract_sum = contract.period_amount_dt if contract else 0
+
+        # qancha to'lov qilingan
+        total_paid = Payment.objects.filter(student=obj).aggregate(total=Sum("amount"))["total"] or 0
+
+        # left hisoblash: kontrakt summasi - to'langan summa
+        left = contract_sum - total_paid
+        return max(left, 0)  # manfiy chiqmasligi uchun
 
 
 # Retrieve
@@ -82,7 +90,16 @@ class StudentSerializer(serializers.ModelSerializer):
         return total_paid or 0
 
     def get_left(self, obj: Student):
-        return obj.contract_payments.aggregate(total_left=Sum('left'))['total_left'] or 0
+        # kontrakt summasi
+        contract = obj.contract.first()
+        contract_sum = contract.period_amount_dt if contract else 0
+
+        # qancha to'lov qilingan
+        total_paid = Payment.objects.filter(student=obj).aggregate(total=Sum("amount"))["total"] or 0
+
+        # left hisoblash: kontrakt summasi - to'langan summa
+        left = contract_sum - total_paid
+        return max(left, 0)  # manfiy chiqmasligi uchun
 
 
 # Statistics

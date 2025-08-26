@@ -12,26 +12,48 @@ from data.student.serializers import *
 
 
 # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
+from django.db.models import Q
+
 class StudentEduYearListApiView(generics.ListAPIView):
     serializer_class = StudentEduYearSerializer
     pagination_class = CustomPagination
     permission_classes = [IsAuthenticatedUserType]
     filter_backends = [filters.SearchFilter]
-    search_fields = [
-        "full_name",
-        "jshshir",
-        "user_account__phone_number",
-    ]
+    search_fields = ["full_name", "jshshir", "user_account__phone_number"]
 
     def get_queryset(self):
         edu_year = self.kwargs.get('edu_year')
         course = self.request.query_params.get('course')
+        faculty_ids = self.request.query_params.get('faculty')
+        percentage_ranges = self.request.query_params.get('percentage')
 
-        queryset = Student.objects.filter(student_years__education_year_id=edu_year)
+        queryset = Student.objects.filter(
+            student_years__education_year_id=edu_year
+        )
 
+        # Kurs bo‘yicha filter
         if course:
             queryset = queryset.filter(course=course)
-        return queryset
+
+        # Fakultet bo‘yicha filter
+        if faculty_ids:
+            faculty_list = [int(f_id) for f_id in faculty_ids.split(",")]
+            queryset = queryset.filter(specialization__faculty_id__in=faculty_list)
+
+        # Foiz bo‘yicha filter
+        if percentage_ranges:
+            ranges = percentage_ranges.split(",")
+            q_objects = Q()
+            for r in ranges:
+                try:
+                    start, end = r.split("-")
+                    q_objects |= Q(contract__payment_percentage__gte=float(start),
+                                   contract__payment_percentage__lte=float(end))
+                except ValueError:
+                    continue
+            queryset = queryset.filter(q_objects)
+
+        return queryset.distinct()
 
 
 # Retrieve

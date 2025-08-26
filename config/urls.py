@@ -42,6 +42,7 @@ urlpatterns = [
     path("education-year/", include("data.education_year.urls")),
     path("students/", include("data.student.urls")),
     path("payment/", include("data.payment.urls")),
+    path("faculty/", include("data.faculty.urls")),
 
     # Swagger
     re_path(
