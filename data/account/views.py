@@ -56,12 +56,12 @@ class StudentUserLoginAPIView(APIView):
             # JWT token yaratish
             refresh = RefreshToken.for_user(student_user)
             refresh['role'] = 'STUDENT'
-            refresh['student_user_id'] = str(student_user.id)
+            refresh['student_user_id'] = str(student_user.student.id)
 
             # Access tokenga ham qo‘shish
             access = refresh.access_token
             access['role'] = 'STUDENT'
-            access['student_user_id'] = str(student_user.id)
+            access['student_user_id'] = str(student_user.student.id)
 
             return Response({
                 'access': str(access),
@@ -109,18 +109,10 @@ class StudentMeAPIView(APIView):
             return Response({"error": "Student user not found"}, status=403)
 
         data = {
-            'student_id': student_user.id,
+            'student_id': student_user.student.id,
             'full_name': student_user.student.full_name,
             'phone_number': student_user.phone_number,
             'jshshir': student_user.student.jshshir,
             'created_at': student_user.created_at
         }
-
-        # data = {
-        #     'student_id': student_user.student.id,
-        #     'full_name': student_user.student.full_name,
-        #     'phone_number': student_user.phone_number,
-        #     'jshshir': student_user.student.jshshir,
-        #     'created_at': student_user.created_at
-        # }
         return Response(data)
