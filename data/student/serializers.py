@@ -55,6 +55,7 @@ class StudentSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'full_name',
+            'jshshir',
             'specialization',
             'phone_number',
             'course',
