@@ -1,5 +1,6 @@
 from django.contrib.messages import success
 from rest_framework import generics, filters, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -24,6 +25,11 @@ class StudentEduYearListApiView(generics.ListAPIView):
 
     def get_queryset(self):
         edu_year = self.kwargs.get('edu_year')
+        course = self.request.query_params.get('course')
+
+        if course:
+            return Student.objects.filter(course=course, edu_year=edu_year)
+
         return Student.objects.filter(student_years__education_year_id=edu_year)
 
 
@@ -32,6 +38,23 @@ class StudentGetApiView(generics.RetrieveAPIView):
     queryset = Student.objects.filter(is_archived=False)
     serializer_class = StudentSerializer
     permission_classes = [IsAuthenticatedUserType]
+
+    def get_object(self):
+        # Admin bo‘lsa – hamma studentni ko‘rishi mumkin
+        if getattr(self.request, "admin_user", None):
+            return super().get_object()
+
+        # Student bo‘lsa – faqat o‘zini ko‘ra olishi kerak
+        if getattr(self.request, "student_user", None):
+            student = Student.objects.filter(
+                user_account=self.request.student_user,
+                is_archived=False
+            ).first()
+            if not student:
+                raise PermissionDenied("Siz faqat o‘zingizni ko‘rishingiz mumkin")
+            return student
+
+        raise PermissionDenied("Ruxsat yo‘q")
 
 
 # Statistics

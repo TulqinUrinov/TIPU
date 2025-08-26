@@ -51,6 +51,7 @@ class StudentSerializer(serializers.ModelSerializer):
             'full_name',
             'specialization',
             'phone_number',
+            'course',
             'group',
             'contract',
             'total_paid',
