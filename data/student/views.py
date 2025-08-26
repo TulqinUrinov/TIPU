@@ -1,25 +1,27 @@
-from django.contrib.messages import success
+from django.db.models.functions import Coalesce
 from rest_framework import generics, filters, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import filters
 
 from sms.sayqal import SayqalSms
 from data.common.pagination import CustomPagination
 from data.common.permission import IsAuthenticatedUserType
-from data.student.models import Student
+
 from data.student.serializers import *
 
-
 # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
-from django.db.models import Q
+from django.db.models import Q, Value, F
+
 
 class StudentEduYearListApiView(generics.ListAPIView):
     serializer_class = StudentEduYearSerializer
     pagination_class = CustomPagination
     permission_classes = [IsAuthenticatedUserType]
-    filter_backends = [filters.SearchFilter]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["full_name", "jshshir", "user_account__phone_number"]
+    ordering_fields = ["full_name", "left"]  # faqat shu maydonlar bo‘yicha sortlashga ruxsat
 
     def get_queryset(self):
         edu_year = self.kwargs.get('edu_year')
