@@ -252,3 +252,12 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "Asia/Tashkent"
+
+
+
+# Max upload fayl hajmini oshirish (64MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 64 * 1024 * 1024  # 64MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 64 * 1024 * 1024  # 64MB
+
+# Agar NGINX ishlatayotgan bo'lsa
+MAX_UPLOAD_SIZE = 64 * 1024 * 1024  # 64MB
