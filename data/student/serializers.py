@@ -192,8 +192,6 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
 
         # percentage bo‘yicha filter
         percentage_range = request.query_params.get("percentage") if request else None
-        print("AAAAAAAAAAAaaaaaaaaaaaaAAAAAAAAAAAAAAAAAAAAAAAAAA")
-        print(percentage_range)
         if percentage_range:
             start, end = map(float, percentage_range.split("-"))
             queryset = queryset.filter(
