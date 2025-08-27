@@ -1,4 +1,4 @@
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, NullIf
 from rest_framework import generics, filters, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -13,7 +13,7 @@ from data.common.permission import IsAuthenticatedUserType
 from data.student.serializers import *
 
 # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
-from django.db.models import Q, Value, F, OuterRef, Subquery, DecimalField
+from django.db.models import Q, Value, F, OuterRef, Subquery, DecimalField, ExpressionWrapper
 
 
 class StudentEduYearListApiView(generics.ListAPIView):
@@ -30,10 +30,32 @@ class StudentEduYearListApiView(generics.ListAPIView):
         faculty_ids = self.request.query_params.get('faculty')
         percentage_ranges = self.request.query_params.get('percentage')
 
+        # queryset = Student.objects.filter(
+        #     student_years__education_year_id=edu_year
+        # )
+
         queryset = Student.objects.filter(
             student_years__education_year_id=edu_year
+        ).annotate(
+            contract_amount=Coalesce(
+                F("contract__period_amount_dt"),
+                Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+            ),
+            total_paid=Coalesce(
+                Sum("payments__amount", output_field=DecimalField(max_digits=12, decimal_places=2)),
+                Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+            )
+        ).annotate(
+            left=ExpressionWrapper(
+                F("contract_amount") - F("total_paid"),
+                output_field=DecimalField(max_digits=12, decimal_places=2)
+            ),
+            percentage=ExpressionWrapper(
+                (F("total_paid") * Value(100.0, output_field=DecimalField(max_digits=5, decimal_places=2)))
+                / NullIf(F("contract_amount"), Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))),
+                output_field=DecimalField(max_digits=5, decimal_places=2)
+            )
         )
-
         # Kurs bo‘yicha filter
         if course:
             queryset = queryset.filter(course=course)

@@ -54,6 +54,7 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
     contract = serializers.SerializerMethodField()
     total_paid = serializers.SerializerMethodField()
     left = serializers.SerializerMethodField()
+    percentage = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
 
     class Meta:
         model = Student
@@ -65,11 +66,14 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
             'contract',
             'total_paid',
             'left',
+            "percentage",
         )
 
     def get_phone_number(self, obj: Student) -> str:
         if hasattr(obj, "user_account"):
             return obj.user_account.phone_number
+        elif obj.phone_number:
+            return obj.phone_number
         return None
 
     def get_contract(self, obj: Student):

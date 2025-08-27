@@ -19,6 +19,14 @@ class Student(BaseModel):
         unique=True
     )
 
+    phone_number = models.CharField(
+        max_length=20,
+        unique=True,
+        verbose_name="Telefon raqami",
+        null=True,
+        blank=True
+    )
+
     status = models.CharField(
         max_length=50,
         verbose_name="Talaba statusi",
