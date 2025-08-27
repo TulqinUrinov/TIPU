@@ -130,7 +130,7 @@ class StudentStatisticsApiView(APIView):
 
         serializer = StudentStatisticsSerializer(
             instance=Student(),
-            context={"filters": filters}
+            context={"filters": filters,"request": request}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
 

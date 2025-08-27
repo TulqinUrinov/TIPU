@@ -1,4 +1,5 @@
-from django.db.models import Sum
+from django.db.models import Sum, DecimalField, ExpressionWrapper, Value, F
+from django.db.models.functions import Coalesce, NullIf
 from rest_framework import serializers
 
 from data.payment.models import Payment, InstallmentPayment
@@ -168,8 +169,39 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
         )
 
     def get_queryset(self):
+        request = self.context.get("request")
         filters = self.context.get("filters", {"is_archived": False})
-        return Student.objects.filter(**filters)
+
+        queryset = Student.objects.filter(**filters).annotate(
+            contract_amount=Coalesce(
+                F("contract__period_amount_dt"),
+                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+            ),
+            left_sum=Coalesce(
+                Sum("contract_payments__left"),
+                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+            ),
+        ).annotate(
+            total_paid=F("contract_amount") - F("left_sum"),
+            percentage=ExpressionWrapper(
+                (F("total_paid") * Value(100, output_field=DecimalField()))
+                / NullIf(F("contract_amount"), Value(0, output_field=DecimalField())),
+                output_field=DecimalField(max_digits=5, decimal_places=2)
+            )
+        )
+
+        # percentage bo‘yicha filter
+        percentage_range = request.query_params.get("percentage") if request else None
+        print("AAAAAAAAAAAaaaaaaaaaaaaAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        print(percentage_range)
+        if percentage_range:
+            start, end = map(float, percentage_range.split("-"))
+            queryset = queryset.filter(
+                percentage__gte=start,
+                percentage__lte=end
+            )
+
+        return queryset
 
     def get_total_students(self, obj: Student) -> int:
         total_students = self.get_queryset().count()
