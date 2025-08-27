@@ -1,5 +1,7 @@
-from rest_framework import viewsets, mixins, generics
+from rest_framework import viewsets, mixins, generics, status
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
 
 from data.common.permission import IsAuthenticatedUserType
 
@@ -27,6 +29,40 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
         if student_id:
             queryset = queryset.filter(student_id=student_id)
         return queryset
+
+    def update(self, request, *args, **kwargs):
+        """Agar custom=True bo‘lsa skip qilinadi, qolganlarini update qilamiz"""
+        instance = self.get_object()
+        partial = kwargs.pop('partial', False)
+
+        # agar bitta object update qilinayotgan bo‘lsa
+        if instance.custom:
+            return Response(
+                {"detail": "Bu to‘lov custom bo‘lgani uchun update qilinmaydi."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["put"], url_path="bulk-update")
+    def bulk_update(self, request):
+        """
+        Barcha custom=False bo‘lgan InstallmentPayment larni update qilish
+        """
+        data = request.data
+        qs = InstallmentPayment.objects.filter(custom=False)
+
+        updated = []
+        for obj in qs:
+            serializer = self.get_serializer(obj, data=data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            updated.append(serializer.data)
+
+        return Response(updated, status=status.HTTP_200_OK)
 
 
 # To'lov tarixi

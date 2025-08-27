@@ -87,7 +87,6 @@ class ImportPaymentsAPIView(APIView):
                 tmp_file.write(chunk)
             tmp_file_path = tmp_file.name
 
-        # try:
         # Import qilish
         result = import_payments_from_excel(tmp_file_path)
 

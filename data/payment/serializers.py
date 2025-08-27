@@ -5,7 +5,14 @@ from .models import InstallmentPayment, Payment
 class InstallmentPaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = InstallmentPayment
-        fields = ("id", "student", "installment_count", "left", "installment_payments")
+        fields = (
+            "id",
+            "student",
+            "installment_count",
+            "left",
+            "installment_payments",
+            "custom",
+        )
 
     def validate(self, data):
         """Check that installment_count matches number of splits"""

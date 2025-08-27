@@ -50,5 +50,7 @@ class InstallmentPayment(BaseModel):
 
     left = models.DecimalField(max_digits=15, decimal_places=2, default=0)
 
+    custom = models.BooleanField(default=False)
+
     def __str__(self):
         return f"{self.student} - {self.installment_count} parts"
