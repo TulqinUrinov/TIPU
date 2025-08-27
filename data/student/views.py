@@ -52,12 +52,12 @@ class StudentEduYearListApiView(generics.ListAPIView):
                 F("contract__period_amount_dt"),
                 Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
             ),
-            left_sum=Coalesce(
+            left=Coalesce(
                 Sum("contract_payments__left"),
                 Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
             ),
         ).annotate(
-            total_paid=F("contract_amount") - F("left_sum"),
+            total_paid=F("contract_amount") - F("left"),
             percentage=ExpressionWrapper(
                 (F("total_paid") * Value(100, output_field=DecimalField()))
                 / NullIf(F("contract_amount"), Value(0, output_field=DecimalField())),
