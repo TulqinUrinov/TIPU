@@ -111,22 +111,21 @@ class StudentStatisticsApiView(APIView):
     permission_classes = [IsAuthenticatedUserType]
 
     def get(self, request):
-        course = request.query_params.get("course")   # masalan: ?course=1-kurs
-        faculty_ids = request.query_params.getlist("faculty_ids")
-        # masalan: ?faculty_ids=1&faculty_ids=2&faculty_ids=3
+        course = request.query_params.get("course")  # masalan: ?course=1-kurs
+        faculty_ids = request.query_params.get("faculty")  # masalan: ?faculty=1,2,3
 
         filters = {"is_archived": False}
         if course:
             filters["course"] = course
         if faculty_ids:
-            filters["specialization__faculty_id__in"] = faculty_ids
+            faculty_list = [int(f_id) for f_id in faculty_ids.split(",") if f_id.isdigit()]
+            filters["specialization__faculty_id__in"] = faculty_list
 
         serializer = StudentStatisticsSerializer(
             instance=Student(),
             context={"filters": filters}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 
 # Send Sms to choosen students
