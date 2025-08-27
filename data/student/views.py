@@ -5,6 +5,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import filters
 
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+
 from data.contract.models import Contract
 from sms.sayqal import SayqalSms
 from data.common.pagination import CustomPagination
@@ -13,7 +17,7 @@ from data.common.permission import IsAuthenticatedUserType
 from data.student.serializers import *
 
 # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
-from django.db.models import Q, Value, F, OuterRef, Subquery, DecimalField, ExpressionWrapper
+from django.db.models import Q, Value, F, OuterRef, Subquery, DecimalField, ExpressionWrapper, Count
 
 
 class StudentEduYearListApiView(generics.ListAPIView):
@@ -34,7 +38,7 @@ class StudentEduYearListApiView(generics.ListAPIView):
         edu_year = self.kwargs.get('edu_year')
         course = self.request.query_params.get('course')
         faculty_ids = self.request.query_params.get('faculty')
-        percentage_ranges = self.request.query_params.get('percentage')
+        percentage_range = self.request.query_params.get('percentage')
         type_filter = self.request.query_params.get('type')
 
         # queryset = Student.objects.filter(
@@ -46,23 +50,21 @@ class StudentEduYearListApiView(generics.ListAPIView):
         ).annotate(
             contract_amount=Coalesce(
                 F("contract__period_amount_dt"),
-                Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
             ),
-            total_paid=Coalesce(
-                Sum("payments__amount", output_field=DecimalField(max_digits=12, decimal_places=2)),
-                Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
-            )
+            left_sum=Coalesce(
+                Sum("contract_payments__left"),
+                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+            ),
         ).annotate(
-            left=ExpressionWrapper(
-                F("contract_amount") - F("total_paid"),
-                output_field=DecimalField(max_digits=12, decimal_places=2)
-            ),
+            total_paid=F("contract_amount") - F("left_sum"),
             percentage=ExpressionWrapper(
-                (F("total_paid") * Value(100.0, output_field=DecimalField(max_digits=5, decimal_places=2)))
-                / NullIf(F("contract_amount"), Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))),
+                (F("total_paid") * Value(100, output_field=DecimalField()))
+                / NullIf(F("contract_amount"), Value(0, output_field=DecimalField())),
                 output_field=DecimalField(max_digits=5, decimal_places=2)
             )
         )
+
         # Kurs bo‘yicha filter
         if course:
             queryset = queryset.filter(course=course)
@@ -78,12 +80,12 @@ class StudentEduYearListApiView(generics.ListAPIView):
         if type_filter == "no-hemis":
             queryset = queryset.filter(user_account__isnull=False)
 
-        # Foiz bo‘yicha filter
-        if percentage_ranges:
-            start, end = percentage_ranges.split("-")
+        # percentage bo‘yicha filter
+        if percentage_range:
+            start, end = map(float, percentage_range.split("-"))
             queryset = queryset.filter(
-                contract__payment_percentage__gte=float(start),
-                contract__payment_percentage__lte=float(end)
+                percentage__gte=start,
+                percentage__lte=end
             )
 
         return queryset.distinct()
@@ -130,9 +132,108 @@ class StudentStatisticsApiView(APIView):
 
         serializer = StudentStatisticsSerializer(
             instance=Student(),
-            context={"filters": filters,"request": request}
+            context={"filters": filters, "request": request}
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# Statistics Excel report
+class StudentStatisticsExcelApiView(APIView):
+    permission_classes = [IsAuthenticatedUserType]
+
+    def get(self, request):
+        course = request.query_params.get("course")
+        faculty_ids = request.query_params.get("faculty")
+        percentage_range = request.query_params.get("percentage")
+
+        filters = {"is_archived": False}
+        if course:
+            filters["course"] = course
+        if faculty_ids:
+            faculty_list = [int(f_id) for f_id in faculty_ids.split(",") if f_id.isdigit()]
+            filters["specialization__faculty_id__in"] = faculty_list
+
+        queryset = Student.objects.filter(**filters).annotate(
+            contract_amount=Coalesce(
+                F("contract__period_amount_dt"),
+                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+            ),
+            left_sum=Coalesce(
+                Sum("contract_payments__left"),
+                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+            ),
+        ).annotate(
+            total_paid=F("contract_amount") - F("left_sum"),
+            percentage=ExpressionWrapper(
+                (F("total_paid") * Value(100, output_field=DecimalField()))
+                / NullIf(F("contract_amount"), Value(0, output_field=DecimalField())),
+                output_field=DecimalField(max_digits=5, decimal_places=2)
+            )
+        )
+
+        # Foiz filteri
+        if percentage_range:
+            start, end = map(float, percentage_range.split("-"))
+            queryset = queryset.filter(percentage__gte=start, percentage__lte=end)
+
+        # Fakultet kesimida statistikani yig‘ish
+        stats = (
+            queryset.values("specialization__faculty__name")
+            .annotate(
+                total_students=Count("id"),
+            )
+        )
+
+        results = []
+        for row in stats:
+            faculty_name = row["specialization__faculty__name"]
+            total = row["total_students"]
+
+            paid = queryset.filter(
+                specialization__faculty__name=faculty_name,
+                percentage__gte=100
+            ).count()
+
+            results.append({
+                "faculty": faculty_name,
+                "total_students": total,
+                "paid_students": paid,
+            })
+
+        # Excel yaratish
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Talabalar statistikasi"
+
+        headers = ["№", "Dekanatlar", "Tuzilgan shartnomalar soni",
+                   "100 foiz va undan ortiq to‘laganlar soni",
+                   "Foizda", "O‘zgarish"]
+        ws.append(headers)
+
+        jami_total = jami_paid = jami_diff = 0
+        for i, row in enumerate(results, start=1):
+            total = row["total_students"]
+            paid = row["paid_students"]
+            percent = f"{round((paid / total) * 100) if total else 0}%"
+            diff = total - paid
+
+            ws.append([i, row["faculty"], total, paid, percent, diff])
+
+            jami_total += total
+            jami_paid += paid
+            jami_diff += diff
+
+        # Oxirgi qator Jami
+        jami_percent = f"{round((jami_paid / jami_total) * 100) if jami_total else 0}%"
+        ws.append(["Jami", "", jami_total, jami_paid, jami_percent, jami_diff])
+
+        # Javob sifatida yuborish
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="student_statistics.xlsx"'
+        wb.save(response)
+        return response
 
 
 # Send Sms to choosen students
