@@ -153,8 +153,8 @@ class StudentSerializer(serializers.ModelSerializer):
 # Statistics
 class StudentStatisticsSerializer(serializers.ModelSerializer):
     total_students = serializers.SerializerMethodField()
-    debt_students = serializers.SerializerMethodField()
-    paid_students = serializers.SerializerMethodField()
+    # debt_students = serializers.SerializerMethodField()
+    # paid_students = serializers.SerializerMethodField()
     no_hemis_students = serializers.SerializerMethodField()
     hemis_students = serializers.SerializerMethodField()
 
@@ -164,8 +164,8 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
             "total_students",
             "no_hemis_students",
             "hemis_students",
-            "debt_students",
-            "paid_students",
+            # "debt_students",
+            # "paid_students",
         )
 
     def get_queryset(self):
@@ -205,22 +205,6 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
         total_students = self.get_queryset().count()
         return total_students
 
-    def get_debt_students(self, obj):
-        # Qarzdor: InstallmentPayment.left > 0
-        debt_students = self.get_queryset().filter(
-            is_archived=False,
-            contract_payments__left__gt=0
-        ).distinct().count()
-        return debt_students
-
-    def get_paid_students(self, obj):
-        # To‘liq to‘lagan: InstallmentPayment.left == 0
-        paid_students = self.get_queryset().filter(
-            is_archived=False,
-            contract_payments__left=0
-        ).distinct().count()
-        return paid_students
-
     def get_no_hemis_students(self, obj: Student):
         # StudentUser accounti mavjud bo'lgan studentlar
         return self.get_queryset().filter(
@@ -234,6 +218,22 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
             is_archived=False,
             user_account__isnull=True
         ).count()
+
+    # def get_debt_students(self, obj):
+    #     # Qarzdor: InstallmentPayment.left > 0
+    #     debt_students = self.get_queryset().filter(
+    #         is_archived=False,
+    #         contract_payments__left__gt=0
+    #     ).distinct().count()
+    #     return debt_students
+    #
+    # def get_paid_students(self, obj):
+    #     # To‘liq to‘lagan: InstallmentPayment.left == 0
+    #     paid_students = self.get_queryset().filter(
+    #         is_archived=False,
+    #         contract_payments__left=0
+    #     ).distinct().count()
+    #     return paid_students
 
 
 # Send sms for choosen students
