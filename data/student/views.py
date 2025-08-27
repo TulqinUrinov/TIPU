@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import filters
 
+from data.contract.models import Contract
 from sms.sayqal import SayqalSms
 from data.common.pagination import CustomPagination
 from data.common.permission import IsAuthenticatedUserType
@@ -12,7 +13,7 @@ from data.common.permission import IsAuthenticatedUserType
 from data.student.serializers import *
 
 # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
-from django.db.models import Q, Value, F
+from django.db.models import Q, Value, F, OuterRef, Subquery, DecimalField
 
 
 class StudentEduYearListApiView(generics.ListAPIView):
@@ -44,16 +45,11 @@ class StudentEduYearListApiView(generics.ListAPIView):
 
         # Foiz bo‘yicha filter
         if percentage_ranges:
-            ranges = percentage_ranges.split(",")
-            q_objects = Q()
-            for r in ranges:
-                try:
-                    start, end = r.split("-")
-                    q_objects |= Q(contract__payment_percentage__gte=float(start),
-                                   contract__payment_percentage__lte=float(end))
-                except ValueError:
-                    continue
-            queryset = queryset.filter(q_objects)
+            start, end = percentage_ranges.split("-")
+            queryset = queryset.filter(
+                contract__payment_percentage__gte=float(start),
+                contract__payment_percentage__lte=float(end)
+            )
 
         return queryset.distinct()
 
