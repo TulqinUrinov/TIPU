@@ -167,13 +167,17 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
             "paid_students",
         )
 
+    def get_queryset(self):
+        filters = self.context.get("filters", {"is_archived": False})
+        return Student.objects.filter(**filters)
+
     def get_total_students(self, obj: Student) -> int:
-        total_students = Student.objects.filter(is_archived=False).count()
+        total_students = self.get_queryset().count()
         return total_students
 
     def get_debt_students(self, obj):
         # Qarzdor: InstallmentPayment.left > 0
-        debt_students = Student.objects.filter(
+        debt_students = self.get_queryset().filter(
             is_archived=False,
             contract_payments__left__gt=0
         ).distinct().count()
@@ -181,7 +185,7 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
 
     def get_paid_students(self, obj):
         # To‘liq to‘lagan: InstallmentPayment.left == 0
-        paid_students = Student.objects.filter(
+        paid_students = self.get_queryset().filter(
             is_archived=False,
             contract_payments__left=0
         ).distinct().count()
@@ -189,14 +193,14 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
 
     def get_no_hemis_students(self, obj: Student):
         # StudentUser accounti mavjud bo'lgan studentlar
-        return Student.objects.filter(
+        return self.get_queryset().filter(
             is_archived=False,
             user_account__isnull=False
         ).count()
 
     def get_hemis_students(self, obj: Student):
         # StudentUser accounti yo'q bo'lgan studentlar
-        return Student.objects.filter(
+        return self.get_queryset().filter(
             is_archived=False,
             user_account__isnull=True
         ).count()
