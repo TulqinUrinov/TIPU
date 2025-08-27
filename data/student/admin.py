@@ -9,6 +9,7 @@ class StudentAdmin(admin.ModelAdmin):
         'full_name',
         'id',
         'jshshir',
+        'phone_number',
         'specialization',
         'course',
         'education_type',
@@ -20,4 +21,5 @@ class StudentAdmin(admin.ModelAdmin):
     search_fields = (
         'full_name',
         'jshshir',
+        'phone_number'
     )

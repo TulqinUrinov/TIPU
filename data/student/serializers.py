@@ -154,11 +154,15 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
     total_students = serializers.SerializerMethodField()
     debt_students = serializers.SerializerMethodField()
     paid_students = serializers.SerializerMethodField()
+    no_hemis_students = serializers.SerializerMethodField()
+    hemis_students = serializers.SerializerMethodField()
 
     class Meta:
         model = Student
         fields = (
             "total_students",
+            "no_hemis_students",
+            "hemis_students",
             "debt_students",
             "paid_students",
         )
@@ -182,6 +186,20 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
             contract_payments__left=0
         ).distinct().count()
         return paid_students
+
+    def get_no_hemis_students(self, obj: Student):
+        # StudentUser accounti mavjud bo'lgan studentlar
+        return Student.objects.filter(
+            is_archived=False,
+            user_account__isnull=False
+        ).count()
+
+    def get_hemis_students(self, obj: Student):
+        # StudentUser accounti yo'q bo'lgan studentlar
+        return Student.objects.filter(
+            is_archived=False,
+            user_account__isnull=True
+        ).count()
 
 
 # Send sms for choosen students
