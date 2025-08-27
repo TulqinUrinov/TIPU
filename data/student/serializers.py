@@ -5,55 +5,14 @@ from data.payment.models import Payment, InstallmentPayment
 from data.student.models import Student
 
 
-# O'quv yiliga tegishli barcha talabalar ro'yxati uchun
-
-class StudentEduYearSerializer(serializers.ModelSerializer):
-    phone_number = serializers.SerializerMethodField()
-    contract = serializers.SerializerMethodField()
-    total_paid = serializers.SerializerMethodField()
-    left = serializers.SerializerMethodField()
-    percentage = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Student
-        fields = (
-            'id',
-            'full_name',
-            'jshshir',
-            'phone_number',
-            'contract',
-            'total_paid',
-            'left',
-            'percentage',
-        )
-
-    def get_phone_number(self, obj: Student) -> str:
-        if hasattr(obj, "user_account"):
-            return obj.user_account.phone_number
-        return None
-
-    def get_contract(self, obj: Student):
-        contract = obj.contract.first()
-        return contract.period_amount_dt if contract else None
-
-    def get_total_paid(self, obj: Student):
-        contract = obj.contract.first()
-        return contract.paid_amount_kt if contract else 0
-
-    def get_left(self, obj: Student):
-        contract = obj.contract.first()
-        return contract.final_balance_dt if contract else 0
-
-    def get_percentage(self, obj: Student):
-        contract = obj.contract.first()
-        return contract.payment_percentage if contract else 0
-
-
+# # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
+#
 # class StudentEduYearSerializer(serializers.ModelSerializer):
 #     phone_number = serializers.SerializerMethodField()
 #     contract = serializers.SerializerMethodField()
 #     total_paid = serializers.SerializerMethodField()
 #     left = serializers.SerializerMethodField()
+#     percentage = serializers.SerializerMethodField()
 #
 #     class Meta:
 #         model = Student
@@ -65,6 +24,7 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
 #             'contract',
 #             'total_paid',
 #             'left',
+#             'percentage',
 #         )
 #
 #     def get_phone_number(self, obj: Student) -> str:
@@ -77,21 +37,61 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
 #         return contract.period_amount_dt if contract else None
 #
 #     def get_total_paid(self, obj: Student):
-#         total_paid = Payment.objects.filter(student=obj).aggregate(total=Sum("amount"))["total"]
-#         return total_paid or 0
+#         contract = obj.contract.first()
+#         return contract.paid_amount_kt if contract else 0
 #
 #     def get_left(self, obj: Student):
-#         # kontrakt summasi
 #         contract = obj.contract.first()
-#         contract_sum = contract.period_amount_dt if contract else 0
+#         return contract.final_balance_dt if contract else 0
 #
-#         # qancha to'lov qilingan
-#         total_paid = Payment.objects.filter(student=obj).aggregate(total=Sum("amount"))["total"] or 0
-#
-#         # left hisoblash: kontrakt summasi - to'langan summa
-#         left = contract_sum - total_paid
-#         return max(left, 0)  # manfiy chiqmasligi uchun
-#
+#     def get_percentage(self, obj: Student):
+#         contract = obj.contract.first()
+#         return contract.payment_percentage if contract else 0
+
+
+class StudentEduYearSerializer(serializers.ModelSerializer):
+    phone_number = serializers.SerializerMethodField()
+    contract = serializers.SerializerMethodField()
+    total_paid = serializers.SerializerMethodField()
+    left = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Student
+        fields = (
+            'id',
+            'full_name',
+            'jshshir',
+            'phone_number',
+            'contract',
+            'total_paid',
+            'left',
+        )
+
+    def get_phone_number(self, obj: Student) -> str:
+        if hasattr(obj, "user_account"):
+            return obj.user_account.phone_number
+        return None
+
+    def get_contract(self, obj: Student):
+        contract = obj.contract.first()
+        return contract.period_amount_dt if contract else None
+
+    def get_total_paid(self, obj: Student):
+        total_paid = Payment.objects.filter(student=obj).aggregate(total=Sum("amount"))["total"]
+        return total_paid or 0
+
+    def get_left(self, obj: Student):
+        # kontrakt summasi
+        contract = obj.contract.first()
+        contract_sum = contract.period_amount_dt if contract else 0
+
+        # qancha to'lov qilingan
+        total_paid = Payment.objects.filter(student=obj).aggregate(total=Sum("amount"))["total"] or 0
+
+        # left hisoblash: kontrakt summasi - to'langan summa
+        left = contract_sum - total_paid
+        return max(left, 0)  # manfiy chiqmasligi uchun
+
 
 # Retrieve
 class StudentSerializer(serializers.ModelSerializer):
