@@ -3,7 +3,8 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from data.account.serializers import StudentUserLoginSerializer, StudentUserRegisterSerializer
+from data.account.serializers import StudentUserLoginSerializer, StudentUserRegisterSerializer, \
+    StudentUserPasswordUpdateSerializer
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -115,3 +116,25 @@ class StudentMeAPIView(APIView):
             'created_at': student_user.created_at
         }
         return Response(data)
+
+
+# Parolni yangilash
+class StudentUserPasswordUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticatedUserType]
+
+    def put(self, request):
+        serializer = StudentUserPasswordUpdateSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"success": True, "message": "Parol muvaffaqiyatli yangilandi"},
+                status=status.HTTP_200_OK
+            )
+
+        return Response(
+            {"success": False, "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )

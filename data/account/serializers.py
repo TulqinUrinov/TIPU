@@ -1,10 +1,10 @@
-
 from rest_framework import serializers
 
 from data.account.models import StudentUser
 from data.student.models import Student
 
 
+# Registratsiya
 class StudentUserRegisterSerializer(serializers.ModelSerializer):
     jshshir = serializers.CharField(write_only=True)
     password = serializers.CharField(write_only=True)
@@ -43,6 +43,7 @@ class StudentUserRegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+# Login
 class StudentUserLoginSerializer(serializers.Serializer):
     jshshir = serializers.CharField()
     phone_number = serializers.CharField()
@@ -66,3 +67,19 @@ class StudentUserLoginSerializer(serializers.Serializer):
 
         attrs['student_user'] = student_user
         return attrs
+
+
+# Parolni yangilash
+class StudentUserPasswordUpdateSerializer(serializers.Serializer):
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError("Parollar mos emas")
+        return attrs
+
+    def save(self, **kwargs):
+        student_user = self.context['request'].student_user
+        student_user.set_password(self.validated_data['new_password'])
+        return student_user
