@@ -160,46 +160,6 @@ class Contract(BaseModel):
         )
         self.save()
 
-    # def recalculate_contract(self):
-    #     student = self.student
-    #
-    #     # 1. Umumiy kontrakt summasini hisoblash (boshlang'ich balansni hisobga olib)
-    #     umumiy_summasi = (
-    #             self.period_amount_dt
-    #             + self.initial_balance_dt
-    #             - self.initial_balance_kt
-    #     )
-    #
-    #     # 2. Barcha installmentsni reset qilish
-    #     installments = student.contract_payments.order_by("installment_count")
-    #     for inst in installments:
-    #         inst.left = inst.amount
-    #         inst.save()
-    #
-    #     # 3. Barcha paymentsni qo'llash
-    #     payments = student.payments.order_by("payment_date")
-    #     for payment in payments:
-    #         amount = payment.amount
-    #         for inst in installments:
-    #             if inst.left <= 0:
-    #                 continue
-    #             if amount >= inst.left:
-    #                 amount -= inst.left
-    #                 inst.left = 0
-    #                 inst.save()
-    #             else:
-    #                 inst.left -= amount
-    #                 inst.save()
-    #                 amount = 0
-    #                 break
-    #
-    #     # 4. Contractni yangilash
-    #     total_paid = sum(p.amount for p in payments)
-    #     self.paid_amount_kt = total_paid
-    #     self.final_balance_dt = umumiy_summasi - total_paid
-    #     self.payment_percentage = (total_paid / umumiy_summasi) * 100 if umumiy_summasi > 0 else 0
-    #     self.save()
-
 
 class ContractBalance(BaseModel):
     contract = models.ForeignKey(

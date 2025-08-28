@@ -78,7 +78,9 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
 #
 #         # serialize qilib javob qaytarish
 #         return Response(
-#             InstallmentPaymentSerializer(updated_objs, many=True).data,
+#             # InstallmentPaymentSerializer(updated_objs, many=True).data,
+#             {"installment_count": installment_count,
+#              "payment_dates": payment_dates},
 #             status=status.HTTP_200_OK
 #         )
 

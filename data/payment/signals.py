@@ -26,6 +26,8 @@ def on_payment_save(sender, instance, created, **kwargs):
         if contract:
             add_contract_balance(contract, instance.amount)
 
+        InstallmentPayment.objects.filter(student=student).update(custom=True)
+
         #  Avval StudentUser dan olish
         student_user = getattr(student, "user_account", None)
         phone_number = None
