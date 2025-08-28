@@ -265,6 +265,6 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 64 * 1024 * 1024  # 64MB
 MAX_UPLOAD_SIZE = 64 * 1024 * 1024  # 64MB
 
 
-SITE_URL = "https://your-domain.com"
+SITE_URL = "https://mt.sector-soft.ru"
 
 # SITE_URL = "http://localhost:8000"
