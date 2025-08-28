@@ -139,6 +139,7 @@ def import_students_from_excel(file_path, education_year):
                     student_edu_years_to_create.append(StudentEduYear(student=student, education_year=edu_year))
 
                     # InstallmentPayment (faqat yangi studentlar)
+                    # InstallmentPayment (faqat yangi studentlar)
                     if created_count > 0:
                         amount_per_split = to_decimal(row[13]) / 4
                         start_year = int(str(edu_year).split('-')[0])
@@ -148,15 +149,44 @@ def import_students_from_excel(file_path, education_year):
                             datetime(start_year + 1, 3, 10),
                             datetime(start_year + 1, 5, 10),
                         ]
+
+                        # Boshlang‘ichda barcha left = amount bo‘lsin
+                        installment_payments = [
+                            {
+                                "left": float(amount_per_split),  # default qiymat qo‘shildi
+                                "amount": str(amount_per_split),
+                                "payment_date": d.strftime("%Y-%m-%d"),
+                            }
+                            for d in payment_dates
+                        ]
+
                         installments_to_create.append(
                             InstallmentPayment(
                                 student=student,
                                 installment_count=4,
-                                installment_payments=[
-                                    {"amount": str(amount_per_split), "payment_date": d.strftime("%Y-%m-%d")} for d in
-                                    payment_dates]
+                                installment_payments=installment_payments,
+                                left=float(sum(Decimal(s["left"]) for s in installment_payments))
+                                # umumiy left = contract summasi
                             )
                         )
+                    # if created_count > 0:
+                    #     amount_per_split = to_decimal(row[13]) / 4
+                    #     start_year = int(str(edu_year).split('-')[0])
+                    #     payment_dates = [
+                    #         datetime(start_year, 10, 10),
+                    #         datetime(start_year, 12, 10),
+                    #         datetime(start_year + 1, 3, 10),
+                    #         datetime(start_year + 1, 5, 10),
+                    #     ]
+                    #     installments_to_create.append(
+                    #         InstallmentPayment(
+                    #             student=student,
+                    #             installment_count=4,
+                    #             installment_payments=[
+                    #                 {"amount": str(amount_per_split), "payment_date": d.strftime("%Y-%m-%d")} for d in
+                    #                 payment_dates]
+                    #         )
+                    #     )
 
                 except Exception as e:
                     error_msg = f"Qator {index + 1}: {str(e)}"

@@ -26,19 +26,31 @@ def on_payment_save(sender, instance, created, **kwargs):
         if contract:
             add_contract_balance(contract, instance.amount)
 
-        # agar studentda user_account va phone_number bo‘lsa sms yuborish
-        phone_number = getattr(student.user_account, "phone_number", None) if hasattr(student, "user_account") else None
-        print(f"phone_number: {phone_number}")
+        #  Avval StudentUser dan olish
+        student_user = getattr(student, "user_account", None)
+        phone_number = None
+        if student_user and student_user.phone_number:
+            phone_number = student_user.phone_number
 
-        if phone_number:
-            sms_client = SayqalSms()
+        # Agar StudentUser da bo‘lmasa → Student jadvalidan olish
+        elif student.phone_number:
+            phone_number = student.phone_number
 
-            message = (f"Hurmatli talaba, sizning "
-                       f"{instance.payment_date.strftime('%d-%m-%Y')} "
-                       f"sanasida {instance.amount} so'm to'lovingiz qabul qilindi.")
+        print(f"Topilgan phone_number: {phone_number}")
 
-            response = sms_client.send_sms(phone_number, message)
-            print("SMS yuborildi:", response.text)
+        # Agar umuman topilmasa → SMS yuborilmaydi
+        if not phone_number:
+            print(f"❌ Telefon raqami topilmadi: {student.full_name} ({student.jshshir})")
+            return
+
+        sms_client = SayqalSms()
+
+        message = (f"Hurmatli talaba, sizning "
+                   f"{instance.payment_date.strftime('%d-%m-%Y')} "
+                   f"sanasida {instance.amount} so'm to'lovingiz qabul qilindi.")
+
+        response = sms_client.send_sms(phone_number, message)
+        print("SMS yuborildi:", response.text)
 
 
 @receiver(post_delete, sender=Payment)

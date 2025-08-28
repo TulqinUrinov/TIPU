@@ -111,17 +111,8 @@ class Contract(BaseModel):
                 left=inst.left
             )
 
-        # inst.installment_payments = updated_splits
-        # inst.left = sum(Decimal(s["left"]) for s in updated_splits)  # umumiy left
-
         # inst.save()
         # inst.save(update_fields=["installment_payments", "left"])
-
-        # signalni chaqirmasdan update
-        # InstallmentPayment.objects.filter(id=inst.id).update(
-        #     installment_payments=updated_splits,
-        #     left=inst.left
-        # )
 
         # 3. Barcha paymentsni qo'llash
         payments = student.payments.order_by("payment_date")
@@ -157,16 +148,8 @@ class Contract(BaseModel):
                     installment_payments=inst.installment_payments,
                     left=inst.left)
 
-                # inst.installment_payments = updated_splits
-                # inst.left = sum(Decimal(s["left"]) for s in updated_splits)
                 # # inst.save()
                 # # inst.save(update_fields=["installment_payments", "left"])
-                #
-                # # signalni chaqirmasdan update
-                # InstallmentPayment.objects.filter(id=inst.id).update(
-                #     installment_payments=updated_splits,
-                #     left=inst.left
-                # )
 
         # 4. Contractni yangilash
         total_paid = sum(Decimal(p.amount) for p in payments)

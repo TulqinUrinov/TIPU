@@ -12,10 +12,17 @@ def send_payment_reminders():
 
     for isntallment in InstallmentPayment.objects.all():
         student = isntallment.student
-        phone_number = getattr(student.user_account, "phone_number", None)
+
+        student_user = getattr(student, "user_account", None)
+        phone_number = None
+        if student_user and student_user.phone_number:
+            phone_number = student_user.phone_number
+
+        elif student.phone_number:
+            phone_number = student.phone_number
 
         if not phone_number:
-            continue  # agar studentda telefon raqam yo'q bo'lsa, o'tkazib yuboramiz
+            continue
 
         for payment in isntallment.installment_payments:
             due_date = datetime.datetime.strptime(payment["payment_date"], "%Y-%m-%d").date()

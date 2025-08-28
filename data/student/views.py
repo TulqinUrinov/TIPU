@@ -364,12 +364,12 @@ class SendSmsView(APIView):
         for student in students:
 
             student_user = getattr(student, "user_account", None)
-            if student_user is None:
-                # Student uchun user_account yo‘q – buni skip qilish yoki log qilish
-                continue
+            phone_number = None
 
-            phone_number = student_user.phone_number
-            # phone_number = getattr(student.user_account, "phone_number", None)
+            if student_user and student_user.phone_number:
+                phone_number = student_user.phone_number
+            elif student.phone_number:
+                phone_number = student.phone_number
 
             if phone_number:
                 response = sms_client.send_sms(phone_number, message)
