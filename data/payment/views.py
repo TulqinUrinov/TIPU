@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.db import transaction
 from rest_framework import viewsets, mixins, generics, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -34,6 +35,55 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
         return queryset
 
 
+# class InstallmentPaymentBulkUpdateAPIView(APIView):
+#     permission_classes = [IsAuthenticatedUserType]
+#
+#     def put(self, request):
+#         serializer = InstallmentBulkUpdateSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         validated = serializer.validated_data
+#
+#         installment_count = validated['installment_count']
+#         payment_dates = validated['payment_dates']
+#
+#         qs = InstallmentPayment.objects.filter(custom=False).select_related("student").prefetch_related(
+#             "student__contract"
+#         )
+#
+#         updated_objs = []
+#
+#         for obj in qs:
+#             contract = obj.student.contract.first()
+#             total_amount = contract.period_amount_dt
+#             amount_per_split = (total_amount / Decimal(installment_count)).quantize(Decimal("0.01"))
+#
+#             splits = [
+#                 {
+#                     "left": float(amount_per_split),
+#                     "amount": str(amount_per_split),
+#                     "payment_date": date.isoformat() if hasattr(date, "isoformat") else str(date),
+#                 }
+#                 for date in payment_dates
+#             ]
+#
+#             obj.installment_count = installment_count
+#             obj.installment_payments = splits
+#             obj.left = float(sum(Decimal(s["left"]) for s in splits))
+#
+#             updated_objs.append(obj)
+#
+#         # 🔑 Bulk update faqat bitta queryda yangilaydi
+#         InstallmentPayment.objects.bulk_update(
+#             updated_objs, ["installment_count", "installment_payments", "left"]
+#         )
+#
+#         # serialize qilib javob qaytarish
+#         return Response(
+#             InstallmentPaymentSerializer(updated_objs, many=True).data,
+#             status=status.HTTP_200_OK
+#         )
+
+
 class InstallmentPaymentBulkUpdateAPIView(APIView):
     permission_classes = [IsAuthenticatedUserType]
 
@@ -45,29 +95,30 @@ class InstallmentPaymentBulkUpdateAPIView(APIView):
         installment_count = validated['installment_count']
         payment_dates = validated['payment_dates']
 
-        qs = InstallmentPayment.objects.filter(custom=False)
+        qs = InstallmentPayment.objects.filter(custom=False).select_related("student").prefetch_related(
+            "student__contract")
+
         updated = []
 
         for obj in qs:
-            total_left = obj.left
-            if installment_count == 0:
-                continue
+            contract = obj.student.contract.first()
 
-            # teng taqsimlash
-            amount_per_split = (total_left / Decimal(installment_count)).quantize(Decimal("0.01"))
+            total_amount = contract.period_amount_dt
+
+            amount_per_split = (total_amount / Decimal(installment_count)).quantize(Decimal("0.01"))
 
             splits = []
             for date in payment_dates:
                 splits.append({
-                    "left": float(amount_per_split),
-                    "amount": str(amount_per_split),
+                    "left": float(amount_per_split),  # start holatda to‘liq qoldiq
+                    "amount": str(amount_per_split),  # contract bo‘yicha majburiyat
                     "payment_date": date.isoformat() if hasattr(date, "isoformat") else str(date)
                 })
 
-            # obyektni update qilish
             obj.installment_count = installment_count
             obj.installment_payments = splits
-            obj.save()
+            obj.left = float(sum(Decimal(s["left"]) for s in splits))  # umumiy qoldiq
+            obj.save(update_fields=["installment_count", "installment_payments", "left"])
 
             updated.append(InstallmentPaymentSerializer(obj).data)
 
