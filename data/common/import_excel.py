@@ -522,12 +522,6 @@ def import_payments_from_excel(file_path):
             except (ValueError, TypeError):
                 raise ValidationError(f"Qator {index + 1}: To'lov summasi noto'g'ri formatda")
 
-            # # Sana
-            # try:
-            #     payment_date = datetime.strptime(str(row[4]), '%Y-%m-%d %H:%M:%S')
-            # except ValueError:
-            #     raise ValidationError(f"Qator {index + 1}: To'lov sanasi noto'g'ri formatda (YYYY-MM-DD HH:MM:SS)")
-
             try:
                 payment_date = datetime.strptime(str(row[4]), '%Y-%m-%d %H:%M:%S')
                 payment_date = timezone.make_aware(payment_date)  # <-- muhim o'zgarish

@@ -72,7 +72,6 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
 #
 #             updated_objs.append(obj)
 #
-#         # 🔑 Bulk update faqat bitta queryda yangilaydi
 #         InstallmentPayment.objects.bulk_update(
 #             updated_objs, ["installment_count", "installment_payments", "left"]
 #         )
@@ -122,7 +121,10 @@ class InstallmentPaymentBulkUpdateAPIView(APIView):
 
             updated.append(InstallmentPaymentSerializer(obj).data)
 
-        return Response(updated, status=status.HTTP_200_OK)
+        return Response({
+            "installment_count": installment_count,
+            "payment_dates": payment_dates,
+        }, status=status.HTTP_200_OK)
 
 
 # To'lov tarixi

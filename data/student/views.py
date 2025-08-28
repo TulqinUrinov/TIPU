@@ -1,5 +1,6 @@
 import openpyxl
 from django.db.models.functions import Coalesce, NullIf
+from openpyxl.styles import Alignment, Font, Border, Side
 from rest_framework import generics, filters, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -18,7 +19,7 @@ from data.common.permission import IsAuthenticatedUserType
 from data.student.serializers import *
 
 # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
-from django.db.models import Q, Value, F, OuterRef, Subquery, DecimalField, ExpressionWrapper, Count
+from django.db.models import Q, Value, F, OuterRef, Subquery, DecimalField, ExpressionWrapper, Count, Avg
 
 
 class StudentEduYearListApiView(generics.ListAPIView):
@@ -241,11 +242,10 @@ class StudentStatisticsApiView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-# Statistics Excel report
 class StudentStatisticsExcelApiView(APIView):
     permission_classes = [IsAuthenticatedUserType]
 
-    def get(self, request):
+    def get_queryset(self, request):
         course = request.query_params.get("course")
         faculty_ids = request.query_params.get("faculty")
         percentage_range = request.query_params.get("percentage")
@@ -257,7 +257,7 @@ class StudentStatisticsExcelApiView(APIView):
             faculty_list = [int(f_id) for f_id in faculty_ids.split(",") if f_id.isdigit()]
             filters["specialization__faculty_id__in"] = faculty_list
 
-        queryset = Student.objects.filter(**filters).annotate(
+        qs = Student.objects.filter(**filters).annotate(
             contract_amount=Coalesce(
                 F("contract__period_amount_dt"),
                 Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
@@ -276,60 +276,116 @@ class StudentStatisticsExcelApiView(APIView):
         )
 
         # Foiz filteri
-        if percentage_range:
-            start, end = map(float, percentage_range.split("-"))
-            queryset = queryset.filter(percentage__gte=start, percentage__lte=end)
 
-        # Fakultet kesimida statistikani yig‘ish
-        stats = (
-            queryset.values("specialization__faculty__name")
-            .annotate(
-                total_students=Count("id"),
-            )
+        if percentage_range:
+            if "-" in percentage_range:
+                start, end = map(float, percentage_range.split("-"))
+                qs = qs.filter(percentage__gte=start, percentage__lte=end)
+            else:
+                value = float(percentage_range)
+                qs = qs.filter(percentage=value)
+
+        return qs
+
+    def get_faculty_stats(self, queryset):
+        stats = []
+        faculties = queryset.values("specialization__faculty__name").annotate(
+            total_students=Count("id")
         )
 
-        results = []
-        for row in stats:
-            faculty_name = row["specialization__faculty__name"]
-            total = row["total_students"]
+        for fac in faculties:
+            faculty_name = fac["specialization__faculty__name"] or "Noma’lum"
+            total = fac["total_students"]
 
             paid = queryset.filter(
                 specialization__faculty__name=faculty_name,
                 percentage__gte=100
             ).count()
 
-            results.append({
+            not_paid = total - paid
+            avg_percentage = queryset.filter(
+                specialization__faculty__name=faculty_name
+            ).aggregate(
+                avg=Coalesce(
+                    Avg("percentage"),
+                    Value(0, output_field=DecimalField(max_digits=5, decimal_places=2))
+                )
+            )["avg"]
+
+            # avg_percentage = queryset.filter(
+            #     specialization__faculty__name=faculty_name
+            # ).aggregate(avg=Coalesce(Avg("percentage"), Value(0)))["avg"]
+
+            stats.append({
                 "faculty": faculty_name,
                 "total_students": total,
                 "paid_students": paid,
+                "not_paid_students": not_paid,
+                "paid_percent": round((paid / total) * 100) if total else 0,
+                "avg_percent": round(avg_percentage, 2),
             })
+        return stats
+
+    def get(self, request):
+        queryset = self.get_queryset(request)
+        results = self.get_faculty_stats(queryset)
 
         # Excel yaratish
         wb = Workbook()
         ws = wb.active
         ws.title = "Talabalar statistikasi"
 
-        headers = ["№", "Dekanatlar", "Tuzilgan shartnomalar soni",
-                   "100 foiz va undan ortiq to‘laganlar soni",
-                   "Foizda", "O‘zgarish"]
+        headers = [
+            "№",
+            "Dekanatlar",
+            "Jami talabalar",
+            "To‘liq to‘laganlar soni",
+            "Qarzdorlar soni",
+            "Foizda (to‘lagan)",
+            "O‘rtacha foiz"
+        ]
         ws.append(headers)
 
-        jami_total = jami_paid = jami_diff = 0
+        jami_total = jami_paid = jami_not_paid = 0
         for i, row in enumerate(results, start=1):
-            total = row["total_students"]
-            paid = row["paid_students"]
-            percent = f"{round((paid / total) * 100) if total else 0}%"
-            diff = total - paid
+            ws.append([
+                i,
+                row["faculty"],
+                row["total_students"],
+                row["paid_students"],
+                row["not_paid_students"],
+                f"{row['paid_percent']}%",
+                row["avg_percent"]
+            ])
 
-            ws.append([i, row["faculty"], total, paid, percent, diff])
-
-            jami_total += total
-            jami_paid += paid
-            jami_diff += diff
+            jami_total += row["total_students"]
+            jami_paid += row["paid_students"]
+            jami_not_paid += row["not_paid_students"]
 
         # Oxirgi qator Jami
-        jami_percent = f"{round((jami_paid / jami_total) * 100) if jami_total else 0}%"
-        ws.append(["Jami", "", jami_total, jami_paid, jami_percent, jami_diff])
+        jami_percent = round((jami_paid / jami_total) * 100) if jami_total else 0
+        avg_percent = round(
+            queryset.aggregate(
+                avg=Coalesce(
+                    Avg("percentage"),
+                    Value(0, output_field=DecimalField(max_digits=5, decimal_places=2))
+                )
+            )["avg"],
+            2
+        )
+
+        # avg_percent = round(
+        #     queryset.aggregate(avg=Coalesce(Avg("percentage"), Value(0)))["avg"], 2
+        # )
+        ws.append([
+            "Jami",
+            "",
+            jami_total,
+            jami_paid,
+            jami_not_paid,
+            f"{jami_percent}%",
+            avg_percent
+        ])
 
         # Javob sifatida yuborish
         response = HttpResponse(
@@ -355,7 +411,7 @@ class SendSmsView(APIView):
         sms_client = SayqalSms()
         success, failed = [], []
 
-        # ✅ Agar frontend "send_all": true yuborsa → barcha studentlarni olish
+        # Agar frontend "send_all": true yuborsa → barcha studentlarni olish
         if send_all:
             students = Student.objects.all()
         else:
