@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import InstallmentPayment, Payment
 
 
+# Bo'lib to'lash
 class InstallmentPaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = InstallmentPayment
@@ -23,6 +24,26 @@ class InstallmentPaymentSerializer(serializers.ModelSerializer):
         return data
 
 
+# Barchasini yangilash
+class InstallmentBulkUpdateSerializer(serializers.Serializer):
+    installment_count = serializers.IntegerField()
+    payment_dates = serializers.ListField(
+        child=serializers.DateField(),
+        allow_empty=False
+    )
+
+    def validate(self, attrs):
+        count = attrs['installment_count']
+        dates = attrs['payment_dates']
+
+        if count != len(dates):
+            raise serializers.ValidationError(
+                "installment_count va payment_dates soni mos emas!"
+            )
+        return attrs
+
+
+# To'lovlar tarixi
 class PaymentHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment

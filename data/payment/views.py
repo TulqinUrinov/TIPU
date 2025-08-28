@@ -1,13 +1,16 @@
+from decimal import Decimal
+
 from rest_framework import viewsets, mixins, generics, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from data.common.permission import IsAuthenticatedUserType
 
 from rest_framework import viewsets, mixins
 from .models import InstallmentPayment, Payment
-from .serializers import InstallmentPaymentSerializer, PaymentHistorySerializer
+from .serializers import InstallmentPaymentSerializer, PaymentHistorySerializer, InstallmentBulkUpdateSerializer
 from ..student.models import Student
 
 
@@ -30,37 +33,43 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(student_id=student_id)
         return queryset
 
-    def update(self, request, *args, **kwargs):
-        """Agar custom=True bo‘lsa skip qilinadi, qolganlarini update qilamiz"""
-        instance = self.get_object()
-        partial = kwargs.pop('partial', False)
 
-        # agar bitta object update qilinayotgan bo‘lsa
-        if instance.custom:
-            return Response(
-                {"detail": "Bu to‘lov custom bo‘lgani uchun update qilinmaydi."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+class InstallmentPaymentBulkUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticatedUserType]
 
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+    def put(self, request):
+        serializer = InstallmentBulkUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
+        validated = serializer.validated_data
 
-    @action(detail=False, methods=["put"], url_path="bulk-update")
-    def bulk_update(self, request):
-        """
-        Barcha custom=False bo‘lgan InstallmentPayment larni update qilish
-        """
-        data = request.data
+        installment_count = validated['installment_count']
+        payment_dates = validated['payment_dates']
+
         qs = InstallmentPayment.objects.filter(custom=False)
-
         updated = []
+
         for obj in qs:
-            serializer = self.get_serializer(obj, data=data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            updated.append(serializer.data)
+            total_left = obj.left
+            if installment_count == 0:
+                continue
+
+            # teng taqsimlash
+            amount_per_split = (total_left / Decimal(installment_count)).quantize(Decimal("0.01"))
+
+            splits = []
+            for date in payment_dates:
+                splits.append({
+                    "left": float(amount_per_split),
+                    "amount": str(amount_per_split),
+                    "payment_date": date.isoformat() if hasattr(date, "isoformat") else str(date)
+                })
+
+            # obyektni update qilish
+            obj.installment_count = installment_count
+            obj.installment_payments = splits
+            obj.save()
+
+            updated.append(InstallmentPaymentSerializer(obj).data)
 
         return Response(updated, status=status.HTTP_200_OK)
 
