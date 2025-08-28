@@ -6,50 +6,6 @@ from data.payment.models import Payment, InstallmentPayment
 from data.student.models import Student
 
 
-# # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
-#
-# class StudentEduYearSerializer(serializers.ModelSerializer):
-#     phone_number = serializers.SerializerMethodField()
-#     contract = serializers.SerializerMethodField()
-#     total_paid = serializers.SerializerMethodField()
-#     left = serializers.SerializerMethodField()
-#     percentage = serializers.SerializerMethodField()
-#
-#     class Meta:
-#         model = Student
-#         fields = (
-#             'id',
-#             'full_name',
-#             'jshshir',
-#             'phone_number',
-#             'contract',
-#             'total_paid',
-#             'left',
-#             'percentage',
-#         )
-#
-#     def get_phone_number(self, obj: Student) -> str:
-#         if hasattr(obj, "user_account"):
-#             return obj.user_account.phone_number
-#         return None
-#
-#     def get_contract(self, obj: Student):
-#         contract = obj.contract.first()
-#         return contract.period_amount_dt if contract else None
-#
-#     def get_total_paid(self, obj: Student):
-#         contract = obj.contract.first()
-#         return contract.paid_amount_kt if contract else 0
-#
-#     def get_left(self, obj: Student):
-#         contract = obj.contract.first()
-#         return contract.final_balance_dt if contract else 0
-#
-#     def get_percentage(self, obj: Student):
-#         contract = obj.contract.first()
-#         return contract.payment_percentage if contract else 0
-
-
 class StudentEduYearSerializer(serializers.ModelSerializer):
     phone_number = serializers.SerializerMethodField()
     contract = serializers.SerializerMethodField()

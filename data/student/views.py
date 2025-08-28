@@ -83,11 +83,15 @@ class StudentEduYearListApiView(generics.ListAPIView):
 
         # percentage bo‘yicha filter
         if percentage_range:
-            start, end = map(float, percentage_range.split("-"))
-            queryset = queryset.filter(
-                percentage__gte=start,
-                percentage__lte=end
-            )
+            if "-" in percentage_range:
+                start, end = map(float, percentage_range.split("-"))
+                queryset = queryset.filter(
+                    percentage__gte=start,
+                    percentage__lte=end
+                )
+            else:
+                value = float(percentage_range)
+                queryset = queryset.filter(percentage=value)
 
         return queryset.distinct()
 
