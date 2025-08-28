@@ -30,19 +30,19 @@ class StudentEduYear(BaseModel):
         return f"{self.student.full_name} - {self.education_year.edu_year}"
 
 
-# class PaymentEduYear(BaseModel):
-#     payment: "Payment" = models.ForeignKey(
-#         "payment.Payment",
-#         on_delete=models.CASCADE,
-#         related_name="payment_years",
-#
-#     )
-#
-#     education_year: "EducationYear" = models.ForeignKey(
-#         "education_year.EducationYear",
-#         on_delete=models.CASCADE,
-#         related_name="student_years",
-#     )
-#
-#     def __str__(self):
-#         return f"{self.payment.student.full_name} - {self.education_year.edu_year}"
+class PaymentEduYear(BaseModel):
+    payment: "Payment" = models.ForeignKey(
+        "payment.Payment",
+        on_delete=models.CASCADE,
+        related_name="payment_years",
+
+    )
+
+    education_year: "EducationYear" = models.ForeignKey(
+        "education_year.EducationYear",
+        on_delete=models.CASCADE,
+        related_name="payment_years",
+    )
+
+    def __str__(self):
+        return f"{self.payment.student.full_name} - {self.education_year.edu_year}"

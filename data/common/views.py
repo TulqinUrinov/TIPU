@@ -6,6 +6,7 @@ import os
 from data.common.import_excel import import_students_from_excel, import_payments_from_excel, \
     import_phone_numbers_from_excel
 from data.common.permission import IsAuthenticatedUserType
+from data.file.models import Files
 
 
 class ImportStudentsAPIView(APIView):
@@ -27,6 +28,12 @@ class ImportStudentsAPIView(APIView):
         excel_file = request.FILES['excel_file']
         education_year = request.POST.get('education_year')
 
+        # Faylni Files modeliga saqlash (tarix uchun)
+        saved_file = Files.objects.create(
+            file=excel_file,
+            uploaded_by=request.admin_user if request.user.is_authenticated else None
+        )
+
         # Vaqtincha fayl yaratish
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             for chunk in excel_file.chunks():
@@ -45,7 +52,9 @@ class ImportStudentsAPIView(APIView):
                     {
                         'success': True,
                         'message': result['message'],
-                        'created_count': result['created_count']
+                        'created_count': result['created_count'],
+                        'file_url': saved_file.file.url,  # yuklangan fayl linki
+                        'uploaded_at': saved_file.created_at,
                     },
                     status=status.HTTP_201_CREATED
                 )
@@ -53,7 +62,8 @@ class ImportStudentsAPIView(APIView):
                 return Response(
                     {
                         'success': False,
-                        'error': result['message']
+                        'error': result['message'],
+                        'file_url': saved_file.file.url
                     },
                     status=status.HTTP_400_BAD_REQUEST
                 )
@@ -80,6 +90,13 @@ class ImportPaymentsAPIView(APIView):
             )
 
         excel_file = request.FILES['excel_file']
+        education_year = request.POST.get('education_year')
+
+        # Faylni Files modeliga saqlash (tarix uchun)
+        saved_file = Files.objects.create(
+            file=excel_file,
+            uploaded_by=request.admin_user if request.user.is_authenticated else None
+        )
 
         # Vaqtincha fayl yaratish
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
@@ -88,7 +105,7 @@ class ImportPaymentsAPIView(APIView):
             tmp_file_path = tmp_file.name
 
         # Import qilish
-        result = import_payments_from_excel(tmp_file_path)
+        result = import_payments_from_excel(tmp_file_path, education_year)
 
         # Vaqtincha faylni o'chirish
         os.unlink(tmp_file_path)
@@ -98,7 +115,9 @@ class ImportPaymentsAPIView(APIView):
                 {
                     'success': True,
                     'message': result['message'],
-                    'created_count': result['created_count']
+                    'created_count': result['created_count'],
+                    'file_url': saved_file.file.url,  # yuklangan fayl linki
+                    'uploaded_at': saved_file.created_at,
                 },
                 status=status.HTTP_201_CREATED
             )
@@ -106,7 +125,8 @@ class ImportPaymentsAPIView(APIView):
             return Response(
                 {
                     'success': False,
-                    'error': result['message']
+                    'error': result['message'],
+                    'file_url': saved_file.file.url
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )

@@ -27,4 +27,3 @@ class AdminUser(BaseModel):
     def restore(self):
         """Userni qayta tiklaydi."""
         super().restore()
-
