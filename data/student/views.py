@@ -1,3 +1,4 @@
+import openpyxl
 from django.db.models.functions import Coalesce, NullIf
 from rest_framework import generics, filters, status
 from rest_framework.exceptions import PermissionDenied
@@ -91,6 +92,101 @@ class StudentEduYearListApiView(generics.ListAPIView):
         return queryset.distinct()
 
 
+class StudentEduYearExcelExportApiView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticatedUserType]
+
+    def get_queryset(self):
+        edu_year = self.kwargs.get('edu_year')
+        course = self.request.query_params.get('course')
+        faculty_ids = self.request.query_params.get('faculty')
+        percentage_range = self.request.query_params.get('percentage')
+        type_filter = self.request.query_params.get('type')
+        print(type_filter)
+
+        queryset = Student.objects.filter(
+            student_years__education_year_id=edu_year
+        ).annotate(
+            contract_amount=Coalesce(
+                F("contract__period_amount_dt"),
+                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+            ),
+            left=Coalesce(
+                Sum("contract_payments__left"),
+                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+            ),
+        ).annotate(
+            total_paid=F("contract_amount") - F("left"),
+            percentage=ExpressionWrapper(
+                (F("total_paid") * Value(100, output_field=DecimalField()))
+                / NullIf(F("contract_amount"), Value(0, output_field=DecimalField())),
+                output_field=DecimalField(max_digits=5, decimal_places=2)
+            )
+        )
+
+        if course:
+            queryset = queryset.filter(course=course)
+
+        if faculty_ids:
+            faculty_list = [int(f_id) for f_id in faculty_ids.split(",")]
+            queryset = queryset.filter(specialization__faculty_id__in=faculty_list)
+
+        if type_filter == "hemis":
+            queryset = queryset.filter(user_account__isnull=True)
+        if type_filter == "no-hemis":
+            print(type_filter)
+            queryset = queryset.filter(user_account__isnull=False)
+
+        if percentage_range:
+            start, end = map(float, percentage_range.split("-"))
+            queryset = queryset.filter(
+                percentage__gte=start,
+                percentage__lte=end
+            )
+
+        return queryset.distinct()
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+
+        # Excel fayl yaratamiz
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Talabalar"
+
+        # Header qator
+        headers = [
+            "F.I.Sh", "JSHSHIR", "Telefon",
+            "Fakultet", "Mutaxassislik", "Guruh",
+            "Kontrakt summasi", "To‘langan", "Qoldiq", "Foiz (%)"
+        ]
+        ws.append(headers)
+
+        # Ma'lumotlarni yozish
+        for student in queryset:
+            print(student)
+            ws.append([
+                student.full_name,
+                student.jshshir,
+                student.user_account.phone_number if hasattr(student,
+                                                             "user_account") and student.user_account else student.phone_number,
+                student.specialization.faculty.name if student.specialization and student.specialization.faculty else "",
+                student.specialization.name if student.specialization else "",
+                student.group,
+                float(student.contract_amount or 0),
+                float(student.total_paid or 0),
+                float(student.left or 0),
+                float(student.percentage or 0),
+            ])
+
+        # Javobga yozib yuboramiz
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = 'attachment; filename="students.xlsx"'
+        wb.save(response)
+        return response
+
+
 # Retrieve
 class StudentGetApiView(generics.RetrieveAPIView):
     queryset = Student.objects.filter(is_archived=False)
@@ -119,7 +215,7 @@ class StudentGetApiView(generics.RetrieveAPIView):
 class StudentStatisticsApiView(APIView):
     permission_classes = [IsAuthenticatedUserType]
 
-    def get(self, request):
+    def get(self, request, edu_year):
         course = request.query_params.get("course")  # masalan: ?course=1-kurs
         faculty_ids = request.query_params.get("faculty")  # masalan: ?faculty=1,2,3
 
@@ -132,7 +228,11 @@ class StudentStatisticsApiView(APIView):
 
         serializer = StudentStatisticsSerializer(
             instance=Student(),
-            context={"filters": filters, "request": request}
+            context={
+                "filters": filters,
+                "request": request,
+                "edu_year": edu_year,
+            }
         )
         return Response(serializer.data, status=status.HTTP_200_OK)
 

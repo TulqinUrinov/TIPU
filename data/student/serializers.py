@@ -171,8 +171,9 @@ class StudentStatisticsSerializer(serializers.ModelSerializer):
     def get_queryset(self):
         request = self.context.get("request")
         filters = self.context.get("filters", {"is_archived": False})
+        edu_year = self.context.get("edu_year")
 
-        queryset = Student.objects.filter(**filters).annotate(
+        queryset = Student.objects.filter(student_years__education_year_id=edu_year, **filters).annotate(
             contract_amount=Coalesce(
                 F("contract__period_amount_dt"),
                 Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
