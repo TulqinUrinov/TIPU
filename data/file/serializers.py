@@ -3,15 +3,19 @@ from .models import Files
 
 
 class FileSerializer(serializers.ModelSerializer):
+    uploaded_by = serializers.SerializerMethodField()
     class Meta:
         model = Files
-        fields = ["id", "file", "created_at"]
+        fields = ["id", "file_type", "file", "uploaded_by", "created_at"]
+
+    def get_uploaded_by(self, obj: Files):
+        return obj.uploaded_by.full_name if obj.uploaded_by else None
 
 
 class FileUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Files
-        fields = ["id", "file", "uploaded_by"]
+        fields = ["id", "file_type", "file", "uploaded_by"]
         read_only_fields = ["id", "uploaded_by"]
 
     def create(self, validated_data):

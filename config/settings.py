@@ -45,13 +45,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    # install
     'rest_framework',
     'drf_yasg',
     'rest_framework_simplejwt',
     'corsheaders',
     "django_celery_beat",
-
+    # apps
     "data.student",
     "data.faculty",
     "data.common",
@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "sms",
     "data.comment",
     "data.file",
+    "data.bot",
 ]
 
 MIDDLEWARE = [
@@ -264,7 +265,6 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 64 * 1024 * 1024  # 64MB
 # Agar NGINX ishlatayotgan bo'lsa
 MAX_UPLOAD_SIZE = 64 * 1024 * 1024  # 64MB
 
-
-SITE_URL = "https://mt.sector-soft.ru"
+SITE_URL = config("SITE_URL")
 
 # SITE_URL = "http://localhost:8000"

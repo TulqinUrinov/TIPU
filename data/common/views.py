@@ -30,8 +30,9 @@ class ImportStudentsAPIView(APIView):
 
         # Faylni Files modeliga saqlash (tarix uchun)
         saved_file = Files.objects.create(
+
             file=excel_file,
-            uploaded_by=request.admin_user if request.user.is_authenticated else None
+            uploaded_by=request.admin_user
         )
 
         # Vaqtincha fayl yaratish
@@ -95,7 +96,7 @@ class ImportPaymentsAPIView(APIView):
         # Faylni Files modeliga saqlash (tarix uchun)
         saved_file = Files.objects.create(
             file=excel_file,
-            uploaded_by=request.admin_user if request.user.is_authenticated else None
+            uploaded_by=request.admin_user
         )
 
         # Vaqtincha fayl yaratish
@@ -147,6 +148,11 @@ class StudentPhoneUploadAPIView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         excel_file = request.FILES['excel_file']
+        # Faylni Files modeliga saqlash (tarix uchun)
+        saved_file = Files.objects.create(
+            file=excel_file,
+            uploaded_by=request.admin_user
+        )
 
         # Fayl turini tekshirish
         if not excel_file.name.endswith(('.xlsx', '.xls')):
@@ -167,11 +173,14 @@ class StudentPhoneUploadAPIView(APIView):
             return Response({
                 'success': True,
                 'message': result,
-                'updated_count': int(result.split()[0])
+                'updated_count': int(result.split()[0]),
+                'file_url': saved_file.file.url,  # yuklangan fayl linki
+                'uploaded_at': saved_file.created_at,
             }, status=status.HTTP_200_OK)
         else:
             return Response({
                 'success': False,
                 'errors': result,
-                'error_count': len(result)
+                'error_count': len(result),
+                'file_url': saved_file.file.url,
             }, status=status.HTTP_400_BAD_REQUEST)

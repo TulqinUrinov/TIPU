@@ -28,6 +28,19 @@ services:
 
     command: python manage.py runserver 0.0.0.0:8000
 
+  bot:
+    build: .
+    container_name: bot
+    env_file:
+      - .env
+    volumes: *shared_volumes
+    depends_on:
+      - db
+      - django
+
+    restart: unless-stopped
+    command: python manage.py bot
+
   redis:
     image: redis:alpine
     container_name: redis
@@ -65,17 +78,6 @@ volumes:
   db:
 
 
-  #  lux_bot:
-  #    build: .
-  #    container_name: lux_bot
-  #    env_file:
-  #      - .env
-  #    volumes: *shared_volumes
-  #    depends_on:
-  #      - db
-  #      - django
-  #
-  #    restart: unless-stopped
-  #    command: python manage.py bot
+
 
 

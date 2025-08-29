@@ -98,6 +98,7 @@ class StudentEduYearListApiView(generics.ListAPIView):
         return queryset.distinct()
 
 
+# Student List Excel
 class StudentEduYearExcelExportApiView(generics.GenericAPIView):
     permission_classes = [IsAuthenticatedUserType]
 
@@ -277,10 +278,6 @@ class StatisticsExcelApiView(APIView):
                               Value(0, output_field=DecimalField(max_digits=15, decimal_places=2)))
         )
 
-        # foiz bo‘yicha filterni aniqlash
-        percentage_filter = None
-        percentage_label = "0–100 foiz oralig‘ida to‘laganlar (soni)"
-
         if percentage_range:
             if "-" in percentage_range:
                 start, end = map(float, percentage_range.split("-"))
@@ -291,8 +288,9 @@ class StatisticsExcelApiView(APIView):
                 percentage_filter = {"percentage": value}
                 percentage_label = f"{value} foiz to‘laganlar (soni)"
         else:
-            # Agar filter kiritilmagan bo‘lsa — default 0–100%
-            percentage_filter = {"percentage__gte": 0, "percentage__lte": 100}
+            # Default — faqat haqiqatan ham to‘lov qilganlar
+            percentage_filter = {"percentage__gt": 0, "percentage__lte": 100}
+            percentage_label = "0–100 foiz oralig‘ida to‘laganlar (soni)"
 
         jami_shartnomalar = 0
         jami_tolaganlar = 0

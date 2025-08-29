@@ -227,4 +227,3 @@ celerybeat.pid*
 
 # Media fayllar (yuklangan fayllar githubga ketmasligi uchun)
 media/
-media/file/
