@@ -1,6 +1,7 @@
 import io
 import os
 import subprocess
+import tempfile
 
 from django.conf import settings
 from django.http import FileResponse, Http404
@@ -65,123 +66,63 @@ class ContractDownloadApiView(views.APIView):
         except Files.DoesNotExist:
             raise Http404(f"{template_type} shablon topilmadi")
 
-        # Student ma’lumotlarini qo‘yish
         replacements = {
             "{full_name}": student.full_name,
             "{course}": student.course,
-            "{faculty}": student.specialization.name,
+            "{faculty}": student.specialization.faculty.name,
             "{contract}": f"{student.contract.first().period_amount_dt}",
+            "{jshshir}": student.jshshir,
+            "{specialization}": student.specialization.name,
+            "{education_type}": student.education_type,
+            "{group}": student.group,
         }
 
-        input_path = file.file.path
-        output_docx = os.path.join(settings.MEDIA_ROOT, f"temp_{student.id}.docx")
-
-        # QR kod (saqlangan PDF manzili bo‘ladi)
+        # QR kod yaratish
         qr_url = f"{settings.SITE_URL}/contracts/{student.id}/download/"
         qr_img = qrcode.make(qr_url)
         qr_stream = io.BytesIO()
-        qr_img.save(qr_stream, format='PNG')
+        qr_img.save(qr_stream, format="PNG")
         qr_stream.seek(0)
 
-        # DOCX ni ochib o‘zgartirish
-        doc = Document(input_path)
-        for p in doc.paragraphs:
-            for key, value in replacements.items():
-                if key in p.text:
-                    p.text = p.text.replace(key, value)
+        # Vaqtinchalik docx yaratish
+        with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp_docx:
+            doc = Document(file.file.path)
+            for p in doc.paragraphs:
+                for key, value in replacements.items():
+                    if key in p.text:
+                        p.text = p.text.replace(key, value)
 
-            if "{qr}" in p.text:
-                p.text = p.text.replace("{qr}", "")
-                run = p.add_run()
-                run.add_picture(qr_stream, width=Inches(1.5))
+                if "{qr}" in p.text:
+                    p.text = p.text.replace("{qr}", "")
+                    run = p.add_run()
+                    run.add_picture(qr_stream, width=Inches(1.5))
 
-        doc.save(output_docx)
+            doc.save(tmp_docx.name)
+            output_docx = tmp_docx.name
 
         # LibreOffice orqali PDF ga o‘tkazish
-        output_pdf_dir = settings.MEDIA_ROOT
         subprocess.run([
             "libreoffice",
             "--headless",
             "--convert-to", "pdf",
-            "--outdir", output_pdf_dir,
+            "--outdir", tempfile.gettempdir(),
             output_docx
         ], check=True)
 
         pdf_path = output_docx.replace(".docx", ".pdf")
 
-        # Shartnomani DB ga saqlash
+        # DB ga faqat PDF saqlash
         with open(pdf_path, "rb") as f:
-            contract = ContractFiles.objects.create(
-                student=student,
-            )
+            contract = ContractFiles.objects.create(student=student)
             contract.file.save(f"contract_{student.id}.pdf", f)
 
-        return FileResponse(
-            open(pdf_path, "rb"),
-            as_attachment=True,
-            filename=os.path.basename(pdf_path)
-        )
+        # Vaqtinchalik fayllarni o‘chirish
+        os.remove(output_docx)
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
 
-# class ContractDownloadApiView(views.APIView):
-#     """Shartnomani PDF shaklida yuklab beruvchi API"""
-#
-#     permission_classes = [IsAuthenticatedUserType]
-#
-#     def get(self, request, pk):
-#         try:
-#             file = Files.objects.get(pk=pk)
-#         except Files.DoesNotExist:
-#             raise Http404("File not found")
-#
-#         replacements = {
-#             "{full_name}": "Ali Valiyev",
-#             "{course}": "3-kurs",
-#             "{faculty}": "Informatika fakulteti",
-#             "{contract}": "123456",
-#         }
-#
-#         # DOCX fayl manzili va vaqtinchalik chiqish fayli
-#         input_path = file.file.path
-#         output_docx = os.path.join(settings.MEDIA_ROOT, f"temp_{file.id}.docx")
-#
-#         # QR kodni in-memory yaratish
-#         qr_url = f"{settings.SITE_URL}/files/{file.id}/download/"
-#         qr_img = qrcode.make(qr_url)
-#         qr_stream = io.BytesIO()
-#         qr_img.save(qr_stream, format='PNG')
-#         qr_stream.seek(0)
-#
-#         # DOCX ochish va keywordlarni almashtirish
-#         doc = Document(input_path)
-#
-#         for p in doc.paragraphs:
-#             for key, value in replacements.items():
-#                 if key in p.text:
-#                     p.text = p.text.replace(key, value)
-#
-#             if "{qr}" in p.text:
-#                 p.text = p.text.replace("{qr}", "")
-#                 run = p.add_run()
-#                 run.add_picture(qr_stream, width=Inches(1.5))
-#
-#         doc.save(output_docx)
-#
-#         # LibreOffice orqali PDF ga o‘tkazish
-#         output_pdf_dir = settings.MEDIA_ROOT
-#         subprocess.run([
-#             "libreoffice",
-#             "--headless",
-#             "--convert-to", "pdf",
-#             "--outdir", output_pdf_dir,
-#             output_docx
-#         ], check=True)
-#
-#         pdf_path = output_docx.replace(".docx", ".pdf")
-#
-#         return FileResponse(
-#             open(pdf_path, "rb"),
-#             as_attachment=True,
-#             filename=os.path.basename(pdf_path)
-#         )
-#
-#
+        return FileResponse(
+            contract.file.open("rb"),
+            as_attachment=True,
+            filename=f"contract_{student.id}.pdf"
+        )
