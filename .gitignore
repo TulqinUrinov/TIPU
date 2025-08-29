@@ -223,3 +223,8 @@ celerybeat.pid*
 # Celery stuff
 **/celerybeat-schedule*
 **/celerybeat.pid*
+
+
+# Media fayllar (yuklangan fayllar githubga ketmasligi uchun)
+media/
+media/file/
