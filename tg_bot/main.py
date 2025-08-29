@@ -21,7 +21,7 @@ class Bot:
 
         # Conversation handler
         conv_handler = ConversationHandler(
-            entry_points=[CommandHandler("start", self.start)],
+            entry_points=[MessageHandler(filters.TEXT, self.start)],
             states={
                 ASK_JSHSHIR: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.ask_jshshir)]
             },
@@ -32,7 +32,7 @@ class Bot:
 
         # Tugmalarga handler
         self.app.add_handler(MessageHandler(filters.Regex("To'lovlar ro'yxatini ko'rish"), self.payments))
-        self.app.add_handler(MessageHandler(filters.Regex("To'lov shartnomasi olish"), self.contract_download))
+        self.app.add_handler(MessageHandler(filters.Regex("To'lov shartnomasini olish"), self.contract_download))
 
     def run(self):
         self.app.run_polling()
