@@ -1,13 +1,17 @@
 import os
-from telegram import Update
+from datetime import datetime
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     ConversationHandler, ContextTypes, filters
 )
 from data.student.models import Student
 from data.bot.models import BotUser
+from data.payment.models import InstallmentPayment, Payment
+from data.contract.models import Contract
 
 ASK_JSHSHIR = 1  # Conversation state
+
 
 class Bot:
 
@@ -26,6 +30,10 @@ class Bot:
 
         self.app.add_handler(conv_handler)
 
+        # Tugmalarga handler
+        self.app.add_handler(MessageHandler(filters.Regex("To'lovlar ro'yxatini ko'rish"), self.payments))
+        self.app.add_handler(MessageHandler(filters.Regex("To'lov shartnomasi olish"), self.contract_download))
+
     def run(self):
         self.app.run_polling()
 
@@ -36,10 +44,11 @@ class Bot:
         return ASK_JSHSHIR
 
     async def ask_jshshir(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        jshshir_input = update.message.text.strip()
+        jshshir = update.message.text.strip()
 
         try:
-            student = Student.objects.get(jshshir=jshshir_input)
+            student = Student.objects.get(jshshir=jshshir)
+            context.user_data["jshshir"] = jshshir
         except Student.DoesNotExist:
             await update.message.reply_text("Bunday JSHSHIR topilmadi. Iltimos, qayta kiriting:")
             return ASK_JSHSHIR
@@ -55,15 +64,84 @@ class Bot:
         )
 
         if not created:
-            # Agar allaqachon bor bo‘lsa, student bilan bog‘lash
             bot_user.student = student
             bot_user.username = update.effective_user.username
             bot_user.tg_name = update.effective_user.full_name
             bot_user.save()
 
-        await update.message.reply_text(f"Salom {student.full_name}! Siz ro‘yxatdan o‘tdingiz.")
+        # Studentni session/context ga saqlaymiz
+        context.user_data["student_id"] = student.id
+
+        buttons = [
+            [KeyboardButton("To'lovlar ro'yxatini ko'rish")],
+            [KeyboardButton("To'lov shartnomasi olish")],
+        ]
+
+        reply_markup = ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+        text = f"Salom {student.full_name}!\nPastdagi tugmalardan birini tanlang."
+
+        await update.message.reply_text(
+            text=text,
+            reply_markup=reply_markup,
+        )
 
         return ConversationHandler.END
+
+    async def payments(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        student = Student.objects.get(jshshir=context.user_data.get("jshshir"))
+
+        # Contract ma’lumotlari
+        contract = Contract.objects.filter(student=student).first()
+        contract_sum = contract.period_amount_dt if contract else 0
+
+        # Fakultet va yo‘nalish (agar mavjud bo‘lsa)
+        specialization = getattr(student, "specialization", None)
+        faculty_name = specialization.faculty.name if specialization else "Noma’lum"
+        specialization_name = specialization.name if specialization else "Noma’lum"
+
+        # To‘langan to‘lovlar
+        payments = Payment.objects.filter(student=student).order_by("payment_date")
+        payments_text = ""
+
+
+        if payments.exists():
+            payments_text += "✅ To‘langanlar:\n"
+            for idx, pay in enumerate(payments, start=1):
+                payment_date = pay.payment_date.strftime("%d-%m-%Y")  # sana formatlash
+                amount = f"{pay.amount:,.0f}".replace(",", " ")  # sonlarni bo‘sh joy bilan ajratish
+                payments_text += f"{idx}) {amount} so‘m — {payment_date}\n"
+        else:
+            payments_text += "❌ Hali to‘lov qilinmagan.\n"
+
+        # Qolgan qarzlar (InstallmentPayment)
+        installment = InstallmentPayment.objects.filter(student=student).first()
+        if installment and installment.installment_payments:
+            payments_text += "\n📌 Qolgan to‘lovlar jadvali:\n"
+            for idx, pay in enumerate(installment.installment_payments, start=1):
+                payment_date = datetime.strptime(
+                    pay.get("payment_date"), "%Y-%m-%d"
+                ).strftime("%d-%m-%Y")  # jsondagi sanani formatlash
+                left = f"{int(pay.get('left')):,.0f}".replace(",", " ")  # sonlarni formatlash
+                payments_text += f"{idx}) {left} so‘m — {payment_date}\n"
+
+            left_total = f"{installment.left:,.0f}".replace(",", " ")
+            payments_text += f"\n💰 Umumiy qolgan qarz: {left_total} so‘m"
+        else:
+            payments_text += "\n✅ Qarzdorlik yo‘q."
+
+        # Yakuniy text
+        text = (
+            f"👤 Talaba: {student.full_name}\n"
+            f"🏫 Fakultet: {faculty_name}\n"
+            f"📚 Yo‘nalish: {specialization_name}\n"
+            f"💳 Kontrakt summasi: {contract_sum} so‘m\n\n"
+            f"{payments_text}"
+        )
+
+        await update.message.reply_text(text)
+
+    async def contract_download(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await update.message.reply_text("📄 Shartnoma yuklab olish funksiyasi hali tayyor emas.")
 
 
 if __name__ == "__main__":

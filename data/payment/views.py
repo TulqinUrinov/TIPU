@@ -1,9 +1,7 @@
 from decimal import Decimal
 
-from django.db import transaction
-from rest_framework import viewsets, mixins, generics, status
-from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework import generics, status
+
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -12,7 +10,6 @@ from data.common.permission import IsAuthenticatedUserType
 from rest_framework import viewsets, mixins
 from .models import InstallmentPayment, Payment
 from .serializers import InstallmentPaymentSerializer, PaymentHistorySerializer, InstallmentBulkUpdateSerializer
-from ..student.models import Student
 
 
 # Bo'lib to'lash
