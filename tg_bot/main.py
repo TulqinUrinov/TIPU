@@ -21,7 +21,7 @@ class Bot:
 
         # Conversation handler
         conv_handler = ConversationHandler(
-            entry_points=[MessageHandler(filters.TEXT, self.start)],
+            entry_points=[CommandHandler("start", self.start)],
             states={
                 ASK_JSHSHIR: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.ask_jshshir)]
             },
