@@ -1,10 +1,15 @@
 import os
 from datetime import datetime
+
+import httpx
+from django.conf import settings
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     ConversationHandler, ContextTypes, filters
 )
+
+from data.file.generate import generate_contract
 from data.student.models import Student
 from data.bot.models import BotUser
 from data.payment.models import InstallmentPayment, Payment
@@ -29,10 +34,11 @@ class Bot:
         )
 
         self.app.add_handler(conv_handler)
+        self.app.add_handler(MessageHandler(filters.TEXT, self.message_handler))
 
         # Tugmalarga handler
-        self.app.add_handler(MessageHandler(filters.Regex("To'lovlar ro'yxatini ko'rish"), self.payments))
-        self.app.add_handler(MessageHandler(filters.Regex("To'lov shartnomasini olish"), self.contract_download))
+        # self.app.add_handler(MessageHandler(filters.Regex("To'lovlar ro'yxatini ko'rish"), self.payments))
+        # self.app.add_handler(MessageHandler(filters.Regex("To'lov shartnomasini olish"), self.contract_download))
 
     def run(self):
         self.app.run_polling()
@@ -87,6 +93,14 @@ class Bot:
 
         return ConversationHandler.END
 
+    async def message_handler(self, update, context):
+        text = update.message.text
+        if text == "To'lovlar ro'yxatini ko'rish":
+            await self.payments(update, context)
+
+        elif text == "To'lov shartnomasi olish":
+            await self.contract_download(update, context)
+
     async def payments(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         student = Student.objects.get(jshshir=context.user_data.get("jshshir"))
 
@@ -102,7 +116,6 @@ class Bot:
         # To‘langan to‘lovlar
         payments = Payment.objects.filter(student=student).order_by("payment_date")
         payments_text = ""
-
 
         if payments.exists():
             payments_text += "✅ To‘langanlar:\n"
@@ -125,7 +138,7 @@ class Bot:
                 payments_text += f"{idx}) {left} so‘m — {payment_date}\n"
 
             left_total = f"{installment.left:,.0f}".replace(",", " ")
-            payments_text += f"\n💰 Umumiy qolgan qarz: {left_total} so‘m"
+            payments_text += f"\n💰 Umumiy qolgan to'lov: {left_total} so‘m"
         else:
             payments_text += "\n✅ Qarzdorlik yo‘q."
 
@@ -141,7 +154,15 @@ class Bot:
         await update.message.reply_text(text)
 
     async def contract_download(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await update.message.reply_text("📄 Shartnoma yuklab olish funksiyasi hali tayyor emas.")
+        student = Student.objects.get(jshshir=context.user_data.get("jshshir"))
+        print(student)
+        student_id = student.id
+        print(student_id)
+
+        student = Student.objects.get(pk=student_id)
+        contract_file = generate_contract(student)
+
+        await update.message.reply_document(open(contract_file.file.path, "rb"))
 
 
 if __name__ == "__main__":
