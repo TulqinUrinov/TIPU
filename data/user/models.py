@@ -9,7 +9,7 @@ class AdminUser(BaseModel):
     password = models.CharField(max_length=255, verbose_name="Parol")
 
     def __str__(self):
-        return f"{self.full_name} {self.phone_number}"
+        return f"{self.full_name}"
 
     def set_password(self, raw_password):
         """Parolni hash qiladi."""

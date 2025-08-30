@@ -28,7 +28,7 @@ class Files(BaseModel):
     )
 
     def __str__(self):
-        return self.uploaded_by.full_name
+        return self.uploaded_by.full_name if self.uploaded_by else "No uploader"
 
 
 class ContractFiles(BaseModel):
