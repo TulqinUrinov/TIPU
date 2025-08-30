@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.db import transaction
 from rest_framework import generics, status
 
 from rest_framework.response import Response
@@ -30,6 +31,59 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
         if student_id:
             queryset = queryset.filter(student_id=student_id)
         return queryset
+
+
+class InstallmentPaymentBulkUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticatedUserType]
+
+    def put(self, request):
+        serializer = InstallmentBulkUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
+
+        installment_count = validated['installment_count']
+        payment_dates = validated['payment_dates']
+
+        qs = InstallmentPayment.objects.filter(custom=False).select_related("student")
+
+        updated_objs = []
+
+        for obj in qs.iterator(chunk_size=1000):
+            contract = obj.student.contract.first()
+            if not contract:
+                continue
+
+            total_amount = contract.period_amount_dt
+            amount_per_split = (total_amount / Decimal(installment_count)).quantize(Decimal("0.01"))
+
+            splits = [
+                {
+                    "left": float(amount_per_split),
+                    "amount": str(amount_per_split),
+                    "payment_date": date.isoformat(),
+                }
+                for date in payment_dates
+            ]
+
+            obj.installment_count = installment_count
+            obj.installment_payments = splits
+            obj.left = float(amount_per_split * installment_count)
+
+            updated_objs.append(obj)
+
+        with transaction.atomic():
+            InstallmentPayment.objects.bulk_update(
+                updated_objs,
+                ["installment_count", "installment_payments", "left"],
+                batch_size=1000
+            )
+
+        return Response(
+            {"updated": len(updated_objs),
+             "installment_count": installment_count,
+             "payment_dates": payment_dates},
+            status=status.HTTP_200_OK
+        )
 
 
 # class InstallmentPaymentBulkUpdateAPIView(APIView):
@@ -80,50 +134,50 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
 #              "payment_dates": payment_dates},
 #             status=status.HTTP_200_OK
 #         )
+#
 
-
-class InstallmentPaymentBulkUpdateAPIView(APIView):
-    permission_classes = [IsAuthenticatedUserType]
-
-    def put(self, request):
-        serializer = InstallmentBulkUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated = serializer.validated_data
-
-        installment_count = validated['installment_count']
-        payment_dates = validated['payment_dates']
-
-        qs = InstallmentPayment.objects.filter(custom=False).select_related("student").prefetch_related(
-            "student__contract")
-
-        updated = []
-
-        for obj in qs:
-            contract = obj.student.contract.first()
-
-            total_amount = contract.period_amount_dt
-
-            amount_per_split = (total_amount / Decimal(installment_count)).quantize(Decimal("0.01"))
-
-            splits = []
-            for date in payment_dates:
-                splits.append({
-                    "left": float(amount_per_split),  # start holatda to‘liq qoldiq
-                    "amount": str(amount_per_split),  # contract bo‘yicha majburiyat
-                    "payment_date": date.isoformat() if hasattr(date, "isoformat") else str(date)
-                })
-
-            obj.installment_count = installment_count
-            obj.installment_payments = splits
-            obj.left = float(sum(Decimal(s["left"]) for s in splits))  # umumiy qoldiq
-            obj.save(update_fields=["installment_count", "installment_payments", "left"])
-
-            updated.append(InstallmentPaymentSerializer(obj).data)
-
-        return Response({
-            "installment_count": installment_count,
-            "payment_dates": payment_dates,
-        }, status=status.HTTP_200_OK)
+# class InstallmentPaymentBulkUpdateAPIView(APIView):
+#     permission_classes = [IsAuthenticatedUserType]
+#
+#     def put(self, request):
+#         serializer = InstallmentBulkUpdateSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         validated = serializer.validated_data
+#
+#         installment_count = validated['installment_count']
+#         payment_dates = validated['payment_dates']
+#
+#         qs = InstallmentPayment.objects.filter(custom=False).select_related("student").prefetch_related(
+#             "student__contract")
+#
+#         updated = []
+#
+#         for obj in qs:
+#             contract = obj.student.contract.first()
+#
+#             total_amount = contract.period_amount_dt
+#
+#             amount_per_split = (total_amount / Decimal(installment_count)).quantize(Decimal("0.01"))
+#
+#             splits = []
+#             for date in payment_dates:
+#                 splits.append({
+#                     "left": float(amount_per_split),  # start holatda to‘liq qoldiq
+#                     "amount": str(amount_per_split),  # contract bo‘yicha majburiyat
+#                     "payment_date": date.isoformat() if hasattr(date, "isoformat") else str(date)
+#                 })
+#
+#             obj.installment_count = installment_count
+#             obj.installment_payments = splits
+#             obj.left = float(sum(Decimal(s["left"]) for s in splits))  # umumiy qoldiq
+#             obj.save(update_fields=["installment_count", "installment_payments", "left"])
+#
+#             updated.append(InstallmentPaymentSerializer(obj).data)
+#
+#         return Response({
+#             "installment_count": installment_count,
+#             "payment_dates": payment_dates,
+#         }, status=status.HTTP_200_OK)
 
 
 # To'lov tarixi
