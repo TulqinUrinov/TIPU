@@ -17,15 +17,10 @@ ASK_JSHSHIR = 1
 
 
 class Bot:
-
     def __init__(self):
         BOT_TOKEN = os.environ.get("BOT_TOKEN")
-        self.app = ApplicationBuilder().token(BOT_TOKEN).build()
-        self.app.bot.set_my_commands([
-            BotCommand("start", "Boshni ishga tushirish")
-        ])
+        self.app = ApplicationBuilder().token(BOT_TOKEN).post_init(self.post_init).build()
 
-        # Conversation handler
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler("start", self.start)],
             states={
@@ -37,8 +32,14 @@ class Bot:
         self.app.add_handler(conv_handler)
         self.app.add_handler(MessageHandler(filters.TEXT, self.message_handler))
 
+    async def post_init(self, app):
+        await app.bot.set_my_commands([
+            BotCommand("start", "Botni ishga tushurish"),
+        ])
+
     def run(self):
         self.app.run_polling()
+
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
