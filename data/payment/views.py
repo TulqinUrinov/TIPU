@@ -48,7 +48,7 @@ class InstallmentPaymentBulkUpdateAPIView(APIView):
 
         updated_objs = []
 
-        for obj in qs.iterator(chunk_size=1000):
+        for obj in qs.iterator(chunk_size=1500):
             contract = obj.student.contract.first()
             if not contract:
                 continue
