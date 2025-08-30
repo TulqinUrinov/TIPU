@@ -20,3 +20,11 @@ class BotUser(BaseModel):
         null=True,
         blank=True,
     )
+
+
+class TgPost(BaseModel):
+    message = models.TextField(verbose_name="Xabar matni")
+    file = models.FileField(upload_to="tg_posts/", null=True, blank=True, verbose_name="Media (rasm/video)")
+
+    def __str__(self):
+        return f"TgPost #{self.id} - {self.message[:30]}"

@@ -1,8 +1,6 @@
 import os
 from datetime import datetime
 
-import httpx
-from django.conf import settings
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
@@ -15,7 +13,7 @@ from data.bot.models import BotUser
 from data.payment.models import InstallmentPayment, Payment
 from data.contract.models import Contract
 
-ASK_JSHSHIR = 1  # Conversation state
+ASK_JSHSHIR = 1
 
 
 class Bot:
@@ -36,10 +34,6 @@ class Bot:
         self.app.add_handler(conv_handler)
         self.app.add_handler(MessageHandler(filters.TEXT, self.message_handler))
 
-        # Tugmalarga handler
-        # self.app.add_handler(MessageHandler(filters.Regex("To'lovlar ro'yxatini ko'rish"), self.payments))
-        # self.app.add_handler(MessageHandler(filters.Regex("To'lov shartnomasini olish"), self.contract_download))
-
     def run(self):
         self.app.run_polling()
 
@@ -50,7 +44,8 @@ class Bot:
         return ASK_JSHSHIR
 
     async def ask_jshshir(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        jshshir = update.message.text.strip()
+        # jshshir = update.message.text.strip()
+        jshshir = update.message.text.replace(" ", "").strip()
 
         try:
             student = Student.objects.get(jshshir=jshshir)
@@ -107,6 +102,7 @@ class Bot:
         # Contract ma’lumotlari
         contract = Contract.objects.filter(student=student).first()
         contract_sum = contract.period_amount_dt if contract else 0
+        contract_sum = f"{contract_sum:,.0f}".replace(",", " ")
 
         # Fakultet va yo‘nalish (agar mavjud bo‘lsa)
         specialization = getattr(student, "specialization", None)

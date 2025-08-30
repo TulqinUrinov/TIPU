@@ -31,8 +31,11 @@ def send_payment_reminders():
             if days_left in [5, 3, 1]:
                 message = (
                     f"Hurmatli {student.full_name}, "
-                    f"{payment['amount']} so'm to'lovingizning muddati {due_date} sanasida tugaydi. "
-                    f"Sizda {days_left} kun qoldi."
+                    f"{payment['amount']} so'm kontrakt to'lovingizning muddati {due_date} sanasida tugaydi. "
+                    f"Kontrakt to'lovi kuniga {days_left} kun qoldi."
+                    f"Toshkent Iqtisodiyot va Pedagogika Universitet bilan tuzilgan shartnomaga "
+                    f"asosan kontrakt to'lovini vaqtida to'lashingizni so'raymiz!"
+                    f"Murojaat uchun: "
                 )
 
                 sms_client.send_sms(phone_number, message)
