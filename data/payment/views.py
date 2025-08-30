@@ -85,6 +85,25 @@ class InstallmentPaymentBulkUpdateAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
+class InstallmentPaymentConfigAPIView(APIView):
+    permission_classes = [IsAuthenticatedUserType]
+
+    def get(self, request):
+        obj = InstallmentPayment.objects.filter(custom=False).first()
+        if not obj:
+            return Response(
+                {"detail": "Installment mavjud emas"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(
+            {
+                "installment_count": obj.installment_count,
+                "payment_dates": [p["payment_date"] for p in obj.installment_payments],
+            },
+            status=status.HTTP_200_OK
+        )
+
 
 # class InstallmentPaymentBulkUpdateAPIView(APIView):
 #     permission_classes = [IsAuthenticatedUserType]
