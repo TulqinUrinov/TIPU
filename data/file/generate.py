@@ -95,7 +95,7 @@ def generate_contract(student: Student) -> ContractFiles:
     # DB ga yozish
     with open(pdf_path, "rb") as f:
         contract_file = ContractFiles.objects.create(student=student)
-        contract_file.file.save(f"contract_{student.id}.pdf", f)
+        contract_file.file.save(f"contract_{student.jshshir}.pdf", f)
 
     # Vaqtinchalik fayllarni tozalash
     os.remove(output_docx)
