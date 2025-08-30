@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, BotCommand
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, MessageHandler,
     ConversationHandler, ContextTypes, filters
@@ -21,6 +21,9 @@ class Bot:
     def __init__(self):
         BOT_TOKEN = os.environ.get("BOT_TOKEN")
         self.app = ApplicationBuilder().token(BOT_TOKEN).build()
+        self.app.bot.set_my_commands([
+            BotCommand("start", "Boshni ishga tushirish")
+        ])
 
         # Conversation handler
         conv_handler = ConversationHandler(
