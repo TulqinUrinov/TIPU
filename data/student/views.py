@@ -211,17 +211,15 @@ class StudentEduYearExcelExportApiView(generics.GenericAPIView):
 
 
 # Retrieve
-class StudentGetApiView(generics.RetrieveAPIView):
+class StudentDetailApiView(generics.RetrieveUpdateAPIView):
     queryset = Student.objects.filter(is_archived=False)
     serializer_class = StudentSerializer
     permission_classes = [IsAuthenticatedUserType]
 
     def get_object(self):
-        # Admin bo‘lsa – hamma studentni ko‘rishi mumkin
         if getattr(self.request, "admin_user", None):
             return super().get_object()
 
-        # Student bo‘lsa – faqat o‘zini ko‘ra olishi kerak
         if getattr(self.request, "student_user", None):
             student = Student.objects.filter(
                 user_account=self.request.student_user,

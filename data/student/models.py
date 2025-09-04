@@ -13,6 +13,12 @@ class Student(BaseModel):
         verbose_name="Talaba F.I.Sh"
     )
 
+    picture = models.ImageField(
+        upload_to="pictures",
+        null=True,
+        blank=True,
+    )
+
     jshshir = models.CharField(
         max_length=50,
         verbose_name="JSHSHIR",
@@ -61,10 +67,3 @@ class Student(BaseModel):
 
     def __str__(self):
         return self.full_name
-
-
-
-
-
-
-

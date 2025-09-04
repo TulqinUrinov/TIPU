@@ -63,6 +63,7 @@ class StudentSerializer(serializers.ModelSerializer):
     contract = serializers.SerializerMethodField()
     total_paid = serializers.SerializerMethodField()
     left = serializers.SerializerMethodField()
+    picture = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Student
@@ -77,6 +78,7 @@ class StudentSerializer(serializers.ModelSerializer):
             'contract',
             'total_paid',
             'left',
+            "picture",
         )
 
     def get_phone_number(self, obj: Student) -> str:
