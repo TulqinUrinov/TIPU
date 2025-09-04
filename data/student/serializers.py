@@ -5,6 +5,7 @@ from rest_framework import serializers
 from data.payment.models import Payment, InstallmentPayment
 from data.student.models import Student
 
+
 # Student List
 class StudentEduYearSerializer(serializers.ModelSerializer):
     phone_number = serializers.SerializerMethodField()

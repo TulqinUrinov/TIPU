@@ -1,11 +1,10 @@
-from rest_framework import generics
-
+from rest_framework.viewsets import ModelViewSet
+from .models import Faculty
+from .serializers import FacultySerializer
 from data.common.permission import IsAuthenticatedUserType
-from data.faculty.models import Faculty
-from data.faculty.serializers import FacultySeriazlizer
 
 
-class FacultyListAPIView(generics.ListAPIView):
-    queryset = Faculty.objects.all()
-    serializer_class = FacultySeriazlizer
+class FacultyViewSet(ModelViewSet):
+    queryset = Faculty.objects.all().prefetch_related("specializations")
+    serializer_class = FacultySerializer
     permission_classes = [IsAuthenticatedUserType]

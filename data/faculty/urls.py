@@ -1,7 +1,10 @@
-from django.urls import path
+from rest_framework.routers import DefaultRouter
 
-from data.faculty.views import FacultyListAPIView
+from data.faculty.views import FacultyViewSet
 
-urlpatterns = [
-    path('list/', FacultyListAPIView.as_view(), name='faculty-list'),
-]
+router = DefaultRouter()
+
+router.register(r"", FacultyViewSet)
+
+urlpatterns = router.urls
+

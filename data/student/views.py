@@ -16,7 +16,7 @@ from data.common.permission import IsAuthenticatedUserType
 from data.student.serializers import *
 
 # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
-from django.db.models import Value, F, DecimalField, ExpressionWrapper, Avg
+from django.db.models import Value, F, DecimalField, ExpressionWrapper, Avg, Sum, Case, IntegerField, When, Count
 
 
 # Student List
@@ -383,6 +383,103 @@ class StatisticsExcelApiView(APIView):
         response['Content-Disposition'] = 'attachment; filename=faculty_statistics.xlsx'
         wb.save(response)
         return response
+
+
+
+# class FacultyStatsAPIView(APIView):
+#     """
+#     Fakultetlar kesimida talabalar kontrakt to‘lovi statistikasi
+#     """
+#
+#     def get(self, request, edu_year):
+#         queryset = Student.objects.filter(
+#             student_years__education_year_id=edu_year
+#         ).annotate(
+#             contract_amount=Coalesce(
+#                 F("contract__period_amount_dt"),
+#                 Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+#             ),
+#             left=Coalesce(
+#                 Sum("contract_payments__left"),
+#                 Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+#             ),
+#         ).annotate(
+#             total_paid=F("contract_amount") - F("left"),
+#             percentage=ExpressionWrapper(
+#                 (F("total_paid") * Value(100, output_field=DecimalField()))
+#                 / NullIf(F("contract_amount"), Value(0, output_field=DecimalField())),
+#                 output_field=DecimalField(max_digits=5, decimal_places=2)
+#             )
+#         )
+#
+#         stats = Student.objects.filter(
+#             student_years__education_year_id=edu_year
+#         ).annotate(
+#             contract_amount=Coalesce(
+#                 F("contract__period_amount_dt"),
+#                 Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+#             ),
+#             left=Coalesce(
+#                 Sum("contract_payments__left"),
+#                 Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+#             ),
+#         ).annotate(
+#             total_paid=F("contract_amount") - F("left"),
+#         ).values("specialization__faculty__name").annotate(
+#             total=Count("id"),
+#             fully_paid=Count(Case(
+#                 When(total_paid=F("contract_amount"), then=1)
+#             )),
+#             p76_99=Count(Case(
+#                 When(total_paid__gte=F("contract_amount") * 0.76,
+#                      total_paid__lt=F("contract_amount"), then=1)
+#             )),
+#             p50_75=Count(Case(
+#                 When(total_paid__gte=F("contract_amount") * 0.50,
+#                      total_paid__lt=F("contract_amount") * 0.76, then=1)
+#             )),
+#             p25_49=Count(Case(
+#                 When(total_paid__gte=F("contract_amount") * 0.25,
+#                      total_paid__lt=F("contract_amount") * 0.50, then=1)
+#             )),
+#             p0_24=Count(Case(
+#                 When(total_paid__lt=F("contract_amount") * 0.25, then=1)
+#             )),
+#         )
+#
+#         # Foizlarni ham qo‘shib chiqamiz
+#         results = []
+#         for item in stats:
+#             total = item["total"]
+#             faculty = item["specialization__faculty__name"]
+#             results.append({
+#                 "faculty": faculty,
+#                 "total": total,
+#                 "fully_paid": {
+#                     "count": item["fully_paid"],
+#                     "percent": round((item["fully_paid"] / total) * 100, 1) if total else 0
+#                 },
+#                 "p76_99": {
+#                     "count": item["p76_99"],
+#                     "percent": round((item["p76_99"] / total) * 100, 1) if total else 0
+#                 },
+#                 "p50_75": {
+#                     "count": item["p50_75"],
+#                     "percent": round((item["p50_75"] / total) * 100, 1) if total else 0
+#                 },
+#                 "p25_49": {
+#                     "count": item["p25_49"],
+#                     "percent": round((item["p25_49"] / total) * 100, 1) if total else 0
+#                 },
+#                 "p0_24": {
+#                     "count": item["p0_24"],
+#                     "percent": round((item["p0_24"] / total) * 100, 1) if total else 0
+#                 },
+#             })
+#
+#         return Response(results, status=status.HTTP_200_OK)
+#
+
 
 
 # Send Sms to choosen students

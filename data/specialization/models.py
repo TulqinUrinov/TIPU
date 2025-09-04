@@ -10,6 +10,8 @@ if TYPE_CHECKING:
 class Specialization(BaseModel):
     code = models.CharField(
         max_length=50,
+        null=True,
+        blank=True,
         verbose_name="Mutaxassislik kodi"
     )
 
