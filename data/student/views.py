@@ -1,5 +1,4 @@
 import openpyxl
-from django.db.models.functions import Coalesce, NullIf
 from openpyxl.styles import Alignment, Font, Border, Side
 from rest_framework import generics, filters, status
 from rest_framework.exceptions import PermissionDenied
@@ -7,11 +6,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import filters
 
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
 from django.http import HttpResponse
 
-from data.contract.models import Contract
 from data.faculty.models import Faculty
 from sms.sayqal import SayqalSms
 from data.common.pagination import CustomPagination
@@ -20,7 +16,7 @@ from data.common.permission import IsAuthenticatedUserType
 from data.student.serializers import *
 
 # O'quv yiliga tegishli barcha talabalar ro'yxati uchun
-from django.db.models import Q, Value, F, OuterRef, Subquery, DecimalField, ExpressionWrapper, Count, Avg
+from django.db.models import Value, F, DecimalField, ExpressionWrapper, Avg
 
 
 class StudentEduYearListApiView(generics.ListAPIView):
@@ -43,6 +39,7 @@ class StudentEduYearListApiView(generics.ListAPIView):
         faculty_ids = self.request.query_params.get('faculty')
         percentage_range = self.request.query_params.get('percentage')
         type_filter = self.request.query_params.get('type')
+        status = self.request.query_params.get('status')
 
         # queryset = Student.objects.filter(
         #     student_years__education_year_id=edu_year
@@ -71,6 +68,10 @@ class StudentEduYearListApiView(generics.ListAPIView):
         # Kurs bo‘yicha filter
         if course:
             queryset = queryset.filter(course=course)
+
+        # Student statusi bo'yicha filter
+        if status:
+            queryset = queryset.filter(status=status)
 
         # Fakultet bo‘yicha filter
         if faculty_ids:
@@ -225,10 +226,13 @@ class StudentStatisticsApiView(APIView):
     def get(self, request, edu_year):
         course = request.query_params.get("course")  # masalan: ?course=1-kurs
         faculty_ids = request.query_params.get("faculty")  # masalan: ?faculty=1,2,3
+        student_status = request.query_params.get("status")
 
         filters = {"is_archived": False}
         if course:
             filters["course"] = course
+        if student_status:
+            filters["status"] = student_status
         if faculty_ids:
             faculty_list = [int(f_id) for f_id in faculty_ids.split(",") if f_id.isdigit()]
             filters["specialization__faculty_id__in"] = faculty_list

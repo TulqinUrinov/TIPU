@@ -15,6 +15,7 @@ class StudentAdmin(admin.ModelAdmin):
         'education_type',
         'education_form',
         'group',
+        'status',
 
     )
 
@@ -22,4 +23,9 @@ class StudentAdmin(admin.ModelAdmin):
         'full_name',
         'jshshir',
         'phone_number'
+    )
+    list_filter = (
+        'specialization',
+        'course',
+        'status',
     )
