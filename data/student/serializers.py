@@ -208,3 +208,4 @@ class SendSmsSerializer(serializers.Serializer):
         required=False,
     )
     send_all = serializers.BooleanField(required=False, default=False)
+    send_filtered = serializers.BooleanField(required=False, default=False)

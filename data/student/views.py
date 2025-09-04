@@ -9,6 +9,7 @@ from rest_framework import filters
 from django.http import HttpResponse
 
 from data.faculty.models import Faculty
+from data.student.services import StudentFilterService
 from sms.sayqal import SayqalSms
 from data.common.pagination import CustomPagination
 from data.common.permission import IsAuthenticatedUserType
@@ -35,79 +36,82 @@ class StudentEduYearListApiView(generics.ListAPIView):
     ordering_fields = ["full_name", "left"]  # faqat shu maydonlar bo‘yicha sortlashga ruxsat
 
     def get_queryset(self):
-        edu_year = self.kwargs.get('edu_year')
-        course = self.request.query_params.get('course')
-        faculty_ids = self.request.query_params.get('faculty')
-        specialization_ids = self.request.query_params.get('specialization')
-        percentage_range = self.request.query_params.get('percentage')
-        type_filter = self.request.query_params.get('type')
-        status = self.request.query_params.get('status')
-        education_form = self.request.query_params.get('education_form')
+        return StudentFilterService.filter_students(self.request, self.kwargs.get('edu_year'))
 
-        # queryset = Student.objects.filter(
-        #     student_years__education_year_id=edu_year
-        # )
+    # def get_queryset(self):
+    #     edu_year = self.kwargs.get('edu_year')
+    #     course = self.request.query_params.get('course')
+    #     faculty_ids = self.request.query_params.get('faculty')
+    #     specialization_ids = self.request.query_params.get('specialization')
+    #     percentage_range = self.request.query_params.get('percentage')
+    #     type_filter = self.request.query_params.get('type')
+    #     status = self.request.query_params.get('status')
+    #     education_form = self.request.query_params.get('education_form')
 
-        queryset = Student.objects.filter(
-            student_years__education_year_id=edu_year
-        ).annotate(
-            contract_amount=Coalesce(
-                F("contract__period_amount_dt"),
-                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
-            ),
-            left=Coalesce(
-                Sum("contract_payments__left"),
-                Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
-            ),
-        ).annotate(
-            total_paid=F("contract_amount") - F("left"),
-            percentage=ExpressionWrapper(
-                (F("total_paid") * Value(100, output_field=DecimalField()))
-                / NullIf(F("contract_amount"), Value(0, output_field=DecimalField())),
-                output_field=DecimalField(max_digits=5, decimal_places=2)
-            )
-        )
+    # queryset = Student.objects.filter(
+    #     student_years__education_year_id=edu_year
+    # )
 
-        # Kurs bo‘yicha filter
-        if course:
-            queryset = queryset.filter(course=course)
-
-        # Student statusi bo'yicha filter
-        if status:
-            queryset = queryset.filter(status=status)
-
-        if education_form:
-            queryset = queryset.filter(education_form=education_form)
-
-        # Fakultet bo‘yicha filter
-        if faculty_ids:
-            faculty_list = [int(f_id) for f_id in faculty_ids.split(",")]
-            queryset = queryset.filter(specialization__faculty_id__in=faculty_list)
-
-        # Yo'nalishi bo'yicha filter
-        if specialization_ids:
-            specialization_list = [int(s_id) for s_id in specialization_ids.split(",")]
-            queryset = queryset.filter(specialization_id__in=specialization_list)
-
-        # HEMIS / NO-HEMIS bo‘yicha filter
-        if type_filter == "hemis":
-            queryset = queryset.filter(user_account__isnull=True)
-        if type_filter == "no-hemis":
-            queryset = queryset.filter(user_account__isnull=False)
-
-        # percentage bo‘yicha filter
-        if percentage_range:
-            if "-" in percentage_range:
-                start, end = map(float, percentage_range.split("-"))
-                queryset = queryset.filter(
-                    percentage__gte=start,
-                    percentage__lte=end
-                )
-            else:
-                value = float(percentage_range)
-                queryset = queryset.filter(percentage=value)
-
-        return queryset.distinct()
+    # queryset = Student.objects.filter(
+    #     student_years__education_year_id=edu_year
+    # ).annotate(
+    #     contract_amount=Coalesce(
+    #         F("contract__period_amount_dt"),
+    #         Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+    #     ),
+    #     left=Coalesce(
+    #         Sum("contract_payments__left"),
+    #         Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+    #     ),
+    # ).annotate(
+    #     total_paid=F("contract_amount") - F("left"),
+    #     percentage=ExpressionWrapper(
+    #         (F("total_paid") * Value(100, output_field=DecimalField()))
+    #         / NullIf(F("contract_amount"), Value(0, output_field=DecimalField())),
+    #         output_field=DecimalField(max_digits=5, decimal_places=2)
+    #     )
+    # )
+    #
+    # # Kurs bo‘yicha filter
+    # if course:
+    #     queryset = queryset.filter(course=course)
+    #
+    # # Student statusi bo'yicha filter
+    # if status:
+    #     queryset = queryset.filter(status=status)
+    #
+    # if education_form:
+    #     queryset = queryset.filter(education_form=education_form)
+    #
+    # # Fakultet bo‘yicha filter
+    # if faculty_ids:
+    #     faculty_list = [int(f_id) for f_id in faculty_ids.split(",")]
+    #     queryset = queryset.filter(specialization__faculty_id__in=faculty_list)
+    #
+    # # Yo'nalishi bo'yicha filter
+    # if specialization_ids:
+    #     specialization_list = [int(s_id) for s_id in specialization_ids.split(",")]
+    #     queryset = queryset.filter(specialization_id__in=specialization_list)
+    #
+    # # HEMIS / NO-HEMIS bo‘yicha filter
+    # if type_filter == "hemis":
+    #     queryset = queryset.filter(user_account__isnull=True)
+    # if type_filter == "no-hemis":
+    #     queryset = queryset.filter(user_account__isnull=False)
+    #
+    # # percentage bo‘yicha filter
+    # if percentage_range:
+    #     if "-" in percentage_range:
+    #         start, end = map(float, percentage_range.split("-"))
+    #         queryset = queryset.filter(
+    #             percentage__gte=start,
+    #             percentage__lte=end
+    #         )
+    #     else:
+    #         value = float(percentage_range)
+    #         queryset = queryset.filter(percentage=value)
+    #
+    # return queryset.distinct()
 
 
 # Student List Excel
@@ -385,6 +389,7 @@ class StatisticsExcelApiView(APIView):
         return response
 
 
+# Fakultet bo'yicha studentlar statistikasi
 class FacultyStatsAPIView(APIView):
     permission_classes = [IsAuthenticatedUserType]
     """
@@ -478,37 +483,35 @@ class FacultyStatsAPIView(APIView):
         return Response(results, status=status.HTTP_200_OK)
 
 
-# Send Sms to choosen students
+# Send SMS
 class SendSmsView(APIView):
     permission_classes = [IsAuthenticatedUserType]
 
-    def post(self, request):
+    def post(self, request, edu_year=None):
         serializer = SendSmsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         message = serializer.validated_data['message']
         jshshir_list = serializer.validated_data.get("students", [])
-        send_all = serializer.validated_data.get("send_all", False)  # ✅ qo‘shimcha flag
+        send_all = serializer.validated_data.get("send_all", False)
+        send_filtered = serializer.validated_data.get("send_filtered", False)
 
         sms_client = SayqalSms()
         success, failed = [], []
 
-        # Agar frontend "send_all": true yuborsa → barcha studentlarni olish
         if send_all:
             students = Student.objects.all()
+        elif send_filtered:
+            students = StudentFilterService.filter_students(request, edu_year)
         else:
             students = Student.objects.filter(jshshir__in=jshshir_list)
 
         for student in students:
-
             student_user = getattr(student, "user_account", None)
-            phone_number = None
-
-            if student_user and student_user.phone_number:
-                phone_number = student_user.phone_number
-            elif student.phone_number:
-                phone_number = student.phone_number
-
+            phone_number = (
+                student_user.phone_number if student_user and student_user.phone_number
+                else student.phone_number
+            )
             if phone_number:
                 response = sms_client.send_sms(phone_number, message)
                 if response.status_code == status.HTTP_200_OK:
@@ -526,7 +529,57 @@ class SendSmsView(APIView):
                     "error": "Phone number not found."
                 })
 
-        return Response({
-            "success": success,
-            "failed": failed
-        }, status=status.HTTP_200_OK)
+        return Response({"success": success, "failed": failed}, status=status.HTTP_200_OK)
+
+# # Send Sms to choosen students
+# class SendSmsView(APIView):
+#     permission_classes = [IsAuthenticatedUserType]
+#
+#     def post(self, request):
+#         serializer = SendSmsSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#
+#         message = serializer.validated_data['message']
+#         jshshir_list = serializer.validated_data.get("students", [])
+#         send_all = serializer.validated_data.get("send_all", False)  # ✅ qo‘shimcha flag
+#
+#         sms_client = SayqalSms()
+#         success, failed = [], []
+#
+#         # Agar frontend "send_all": true yuborsa → barcha studentlarni olish
+#         if send_all:
+#             students = Student.objects.all()
+#         else:
+#             students = Student.objects.filter(jshshir__in=jshshir_list)
+#
+#         for student in students:
+#
+#             student_user = getattr(student, "user_account", None)
+#             phone_number = None
+#
+#             if student_user and student_user.phone_number:
+#                 phone_number = student_user.phone_number
+#             elif student.phone_number:
+#                 phone_number = student.phone_number
+#
+#             if phone_number:
+#                 response = sms_client.send_sms(phone_number, message)
+#                 if response.status_code == status.HTTP_200_OK:
+#                     success.append({"jshshir": student.jshshir, "student": student.full_name})
+#                 else:
+#                     failed.append({
+#                         "jshshir": student.jshshir,
+#                         "student": student.full_name,
+#                         "error": response.text
+#                     })
+#             else:
+#                 failed.append({
+#                     "jshshir": student.jshshir,
+#                     "student": student.full_name,
+#                     "error": "Phone number not found."
+#                 })
+#
+#         return Response({
+#             "success": success,
+#             "failed": failed
+#         }, status=status.HTTP_200_OK)
