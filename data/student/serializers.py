@@ -211,3 +211,6 @@ class SendSmsSerializer(serializers.Serializer):
     )
     send_all = serializers.BooleanField(required=False, default=False)
     send_filtered = serializers.BooleanField(required=False, default=False)
+
+    by_sms = serializers.BooleanField(required=False, default=False)
+    by_telegram = serializers.BooleanField(required=False, default=False)

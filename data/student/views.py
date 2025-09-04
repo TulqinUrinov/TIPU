@@ -1,3 +1,5 @@
+import os
+
 import openpyxl
 from openpyxl.styles import Alignment, Font, Border, Side
 from rest_framework import generics, filters, status
@@ -8,8 +10,9 @@ from rest_framework import filters
 
 from django.http import HttpResponse
 
+from data.bot.models import BotUser
 from data.faculty.models import Faculty
-from data.student.services import StudentFilterService
+from data.student.services import StudentFilterService, send_telegram_message
 from sms.sayqal import SayqalSms
 from data.common.pagination import CustomPagination
 from data.common.permission import IsAuthenticatedUserType
@@ -494,9 +497,13 @@ class SendSmsView(APIView):
         send_all = serializer.validated_data.get("send_all", False)
         send_filtered = serializer.validated_data.get("send_filtered", False)
 
+        by_sms = serializer.validated_data.get("by_sms", False)
+        by_telegram = serializer.validated_data.get("by_telegram", False)
+
         sms_client = SayqalSms()
         success, failed = [], []
 
+        # Talabalarni olish
         if send_all:
             students = Student.objects.all()
         elif send_filtered:
@@ -510,22 +517,46 @@ class SendSmsView(APIView):
                 student_user.phone_number if student_user and student_user.phone_number
                 else student.phone_number
             )
-            if phone_number:
+
+            # SMS orqali yuborish
+            if by_sms and phone_number:
                 response = sms_client.send_sms(phone_number, message)
                 if response.status_code == status.HTTP_200_OK:
-                    success.append({"jshshir": student.jshshir, "student": student.full_name})
+                    success.append({"jshshir": student.jshshir, "student": student.full_name, "via": "sms"})
                 else:
                     failed.append({
                         "jshshir": student.jshshir,
                         "student": student.full_name,
+                        "via": "sms",
                         "error": response.text
                     })
-            else:
-                failed.append({
-                    "jshshir": student.jshshir,
-                    "student": student.full_name,
-                    "error": "Phone number not found."
-                })
+
+            # Telegram orqali yuborish
+            if by_telegram:
+                bot_user = BotUser.objects.filter(student=student).first()
+                if bot_user and bot_user.chat_id:
+                    tg_result = send_telegram_message(bot_user.chat_id, message)
+
+                    if tg_result["ok"]:
+                        success.append({
+                            "jshshir": student.jshshir,
+                            "student": student.full_name,
+                            "via": "telegram"
+                        })
+                    else:
+                        failed.append({
+                            "jshshir": student.jshshir,
+                            "student": student.full_name,
+                            "via": "telegram",
+                            "error": tg_result["error"]
+                        })
+                else:
+                    failed.append({
+                        "jshshir": student.jshshir,
+                        "student": student.full_name,
+                        "via": "telegram",
+                        "error": "Telegram account not found."
+                    })
 
         return Response({"success": success, "failed": failed}, status=status.HTTP_200_OK)
 
