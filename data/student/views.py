@@ -232,16 +232,24 @@ class StudentStatisticsApiView(APIView):
     def get(self, request, edu_year):
         course = request.query_params.get("course")  # masalan: ?course=1-kurs
         faculty_ids = request.query_params.get("faculty")  # masalan: ?faculty=1,2,3
+        specialization_ids = self.request.query_params.get('specialization')
         student_status = request.query_params.get("status")
 
         filters = {"is_archived": False}
+
         if course:
             filters["course"] = course
+
         if student_status:
             filters["status"] = student_status
+
         if faculty_ids:
             faculty_list = [int(f_id) for f_id in faculty_ids.split(",") if f_id.isdigit()]
             filters["specialization__faculty_id__in"] = faculty_list
+
+        if specialization_ids:
+            specialization_list = [int(s_id) for s_id in specialization_ids.split(",")]
+            filters["specialization_id__in"] = specialization_list
 
         serializer = StudentStatisticsSerializer(
             instance=Student(),
