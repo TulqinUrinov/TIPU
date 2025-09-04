@@ -13,6 +13,7 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
     total_paid = serializers.SerializerMethodField()
     left = serializers.SerializerMethodField()
     percentage = serializers.DecimalField(max_digits=5, decimal_places=2, read_only=True)
+    overpaid = serializers.SerializerMethodField()
 
     class Meta:
         model = Student
@@ -24,6 +25,7 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
             'contract',
             'total_paid',
             'left',
+            "overpaid",
             "percentage",
             "education_form",
         )
@@ -55,6 +57,15 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
         left = contract_sum - total_paid
         return max(left, 0)  # manfiy chiqmasligi uchun
 
+    def get_overpaid(self, obj: Student):
+        """Agar to‘lov kontraktdan oshsa, farqni ko‘rsatadi"""
+        contract = obj.contract.first()
+        contract_sum = contract.period_amount_dt if contract else 0
+        total_paid = self.get_total_paid(obj)
+
+        overpaid = total_paid - contract_sum
+        return max(overpaid, 0)  # agar ortiqcha bo‘lmasa 0 qaytadi
+
 
 # Retrieve
 class StudentSerializer(serializers.ModelSerializer):
@@ -63,6 +74,7 @@ class StudentSerializer(serializers.ModelSerializer):
     contract = serializers.SerializerMethodField()
     total_paid = serializers.SerializerMethodField()
     left = serializers.SerializerMethodField()
+    overpaid = serializers.SerializerMethodField()
     picture = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
@@ -78,6 +90,7 @@ class StudentSerializer(serializers.ModelSerializer):
             'contract',
             'total_paid',
             'left',
+            "overpaid",
             "picture",
         )
 
@@ -108,6 +121,15 @@ class StudentSerializer(serializers.ModelSerializer):
         # left hisoblash: kontrakt summasi - to'langan summa
         left = contract_sum - total_paid
         return max(left, 0)  # manfiy chiqmasligi uchun
+
+    def get_overpaid(self, obj: Student):
+        """Agar to‘lov kontraktdan oshsa, farqni ko‘rsatadi"""
+        contract = obj.contract.first()
+        contract_sum = contract.period_amount_dt if contract else 0
+        total_paid = self.get_total_paid(obj)
+
+        overpaid = total_paid - contract_sum
+        return max(overpaid, 0)  # agar ortiqcha bo‘lmasa 0 qaytadi
 
 
 # Statistics
