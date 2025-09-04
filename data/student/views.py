@@ -37,6 +37,7 @@ class StudentEduYearListApiView(generics.ListAPIView):
         edu_year = self.kwargs.get('edu_year')
         course = self.request.query_params.get('course')
         faculty_ids = self.request.query_params.get('faculty')
+        specialization_ids = self.request.query_params.get('specialization')
         percentage_range = self.request.query_params.get('percentage')
         type_filter = self.request.query_params.get('type')
         status = self.request.query_params.get('status')
@@ -77,6 +78,11 @@ class StudentEduYearListApiView(generics.ListAPIView):
         if faculty_ids:
             faculty_list = [int(f_id) for f_id in faculty_ids.split(",")]
             queryset = queryset.filter(specialization__faculty_id__in=faculty_list)
+
+        # Yo'nalishi bo'yicha filter
+        if specialization_ids:
+            specialization_list = [int(s_id) for s_id in specialization_ids.split(",")]
+            queryset = queryset.filter(specialization_id__in=specialization_list)
 
         # HEMIS / NO-HEMIS bo‘yicha filter
         if type_filter == "hemis":

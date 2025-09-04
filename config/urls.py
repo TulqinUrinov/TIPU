@@ -46,6 +46,7 @@ urlpatterns = [
     path("comment/", include("data.comment.urls")),
     path("files/", include("data.file.urls")),
     path("posts/", include("data.bot.urls")),
+    path("specialization/", include("data.specialization.urls")),
 
     # Swagger
     re_path(
