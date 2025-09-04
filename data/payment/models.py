@@ -54,3 +54,16 @@ class InstallmentPayment(BaseModel):
 
     def __str__(self):
         return f"{self.student} - {self.installment_count} parts"
+
+
+# Sms
+class ReminderConfig(models.Model):
+    days_before = models.PositiveIntegerField(help_text="Qancha kun oldin sms yuboriladi")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Payment reminder config"
+        verbose_name_plural = "Payment reminder configs"
+
+    def __str__(self):
+        return f"{self.days_before} kun oldin"

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import InstallmentPayment, Payment
+from .models import InstallmentPayment, Payment, ReminderConfig
 
 
 # Bo'lib to'lash
@@ -53,3 +53,9 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
             'amount',
             'payment_date',
         )
+
+
+class ReminderConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReminderConfig
+        fields = ["id", "days_before"]

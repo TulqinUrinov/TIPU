@@ -9,8 +9,9 @@ from rest_framework.views import APIView
 from data.common.permission import IsAuthenticatedUserType
 
 from rest_framework import viewsets, mixins
-from .models import InstallmentPayment, Payment
-from .serializers import InstallmentPaymentSerializer, PaymentHistorySerializer, InstallmentBulkUpdateSerializer
+from .models import InstallmentPayment, Payment, ReminderConfig
+from .serializers import InstallmentPaymentSerializer, PaymentHistorySerializer, InstallmentBulkUpdateSerializer, \
+    ReminderConfigSerializer
 
 
 # Bo'lib to'lash
@@ -85,6 +86,7 @@ class InstallmentPaymentBulkUpdateAPIView(APIView):
             status=status.HTTP_200_OK
         )
 
+
 class InstallmentPaymentConfigAPIView(APIView):
     permission_classes = [IsAuthenticatedUserType]
 
@@ -105,100 +107,6 @@ class InstallmentPaymentConfigAPIView(APIView):
         )
 
 
-# class InstallmentPaymentBulkUpdateAPIView(APIView):
-#     permission_classes = [IsAuthenticatedUserType]
-#
-#     def put(self, request):
-#         serializer = InstallmentBulkUpdateSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         validated = serializer.validated_data
-#
-#         installment_count = validated['installment_count']
-#         payment_dates = validated['payment_dates']
-#
-#         qs = InstallmentPayment.objects.filter(custom=False).select_related("student").prefetch_related(
-#             "student__contract"
-#         )
-#
-#         updated_objs = []
-#
-#         for obj in qs:
-#             contract = obj.student.contract.first()
-#             total_amount = contract.period_amount_dt
-#             amount_per_split = (total_amount / Decimal(installment_count)).quantize(Decimal("0.01"))
-#
-#             splits = [
-#                 {
-#                     "left": float(amount_per_split),
-#                     "amount": str(amount_per_split),
-#                     "payment_date": date.isoformat() if hasattr(date, "isoformat") else str(date),
-#                 }
-#                 for date in payment_dates
-#             ]
-#
-#             obj.installment_count = installment_count
-#             obj.installment_payments = splits
-#             obj.left = float(sum(Decimal(s["left"]) for s in splits))
-#
-#             updated_objs.append(obj)
-#
-#         InstallmentPayment.objects.bulk_update(
-#             updated_objs, ["installment_count", "installment_payments", "left"]
-#         )
-#
-#         # serialize qilib javob qaytarish
-#         return Response(
-#             # InstallmentPaymentSerializer(updated_objs, many=True).data,
-#             {"installment_count": installment_count,
-#              "payment_dates": payment_dates},
-#             status=status.HTTP_200_OK
-#         )
-#
-
-# class InstallmentPaymentBulkUpdateAPIView(APIView):
-#     permission_classes = [IsAuthenticatedUserType]
-#
-#     def put(self, request):
-#         serializer = InstallmentBulkUpdateSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         validated = serializer.validated_data
-#
-#         installment_count = validated['installment_count']
-#         payment_dates = validated['payment_dates']
-#
-#         qs = InstallmentPayment.objects.filter(custom=False).select_related("student").prefetch_related(
-#             "student__contract")
-#
-#         updated = []
-#
-#         for obj in qs:
-#             contract = obj.student.contract.first()
-#
-#             total_amount = contract.period_amount_dt
-#
-#             amount_per_split = (total_amount / Decimal(installment_count)).quantize(Decimal("0.01"))
-#
-#             splits = []
-#             for date in payment_dates:
-#                 splits.append({
-#                     "left": float(amount_per_split),  # start holatda to‘liq qoldiq
-#                     "amount": str(amount_per_split),  # contract bo‘yicha majburiyat
-#                     "payment_date": date.isoformat() if hasattr(date, "isoformat") else str(date)
-#                 })
-#
-#             obj.installment_count = installment_count
-#             obj.installment_payments = splits
-#             obj.left = float(sum(Decimal(s["left"]) for s in splits))  # umumiy qoldiq
-#             obj.save(update_fields=["installment_count", "installment_payments", "left"])
-#
-#             updated.append(InstallmentPaymentSerializer(obj).data)
-#
-#         return Response({
-#             "installment_count": installment_count,
-#             "payment_dates": payment_dates,
-#         }, status=status.HTTP_200_OK)
-
-
 # To'lov tarixi
 class PaymentHistoryApiView(generics.ListAPIView):
     serializer_class = PaymentHistorySerializer
@@ -215,3 +123,10 @@ class PaymentHistoryApiView(generics.ListAPIView):
         if student_jshshir:
             return queryset.filter(student__jshshir=student_jshshir).order_by("-payment_date")
         return queryset
+
+
+# Eslatma sms xabari
+class ReminderConfigViewSet(viewsets.ModelViewSet):
+    queryset = ReminderConfig.objects.all()
+    serializer_class = ReminderConfigSerializer
+    permission_classes = [IsAuthenticatedUserType]
