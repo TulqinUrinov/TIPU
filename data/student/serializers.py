@@ -5,7 +5,7 @@ from rest_framework import serializers
 from data.payment.models import Payment, InstallmentPayment
 from data.student.models import Student
 
-
+# Student List
 class StudentEduYearSerializer(serializers.ModelSerializer):
     phone_number = serializers.SerializerMethodField()
     contract = serializers.SerializerMethodField()
@@ -24,6 +24,7 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
             'total_paid',
             'left',
             "percentage",
+            "education_form",
         )
 
     def get_phone_number(self, obj: Student) -> str:

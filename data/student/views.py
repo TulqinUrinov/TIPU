@@ -19,6 +19,7 @@ from data.student.serializers import *
 from django.db.models import Value, F, DecimalField, ExpressionWrapper, Avg
 
 
+# Student List
 class StudentEduYearListApiView(generics.ListAPIView):
     serializer_class = StudentEduYearSerializer
     pagination_class = CustomPagination
@@ -41,6 +42,7 @@ class StudentEduYearListApiView(generics.ListAPIView):
         percentage_range = self.request.query_params.get('percentage')
         type_filter = self.request.query_params.get('type')
         status = self.request.query_params.get('status')
+        education_form = self.request.query_params.get('education_form')
 
         # queryset = Student.objects.filter(
         #     student_years__education_year_id=edu_year
@@ -73,6 +75,9 @@ class StudentEduYearListApiView(generics.ListAPIView):
         # Student statusi bo'yicha filter
         if status:
             queryset = queryset.filter(status=status)
+
+        if education_form:
+            queryset = queryset.filter(education_form=education_form)
 
         # Fakultet bo‘yicha filter
         if faculty_ids:
@@ -234,6 +239,7 @@ class StudentStatisticsApiView(APIView):
         faculty_ids = request.query_params.get("faculty")  # masalan: ?faculty=1,2,3
         specialization_ids = self.request.query_params.get('specialization')
         student_status = request.query_params.get("status")
+        education_form = self.request.query_params.get('education_form')
 
         filters = {"is_archived": False}
 
@@ -242,6 +248,9 @@ class StudentStatisticsApiView(APIView):
 
         if student_status:
             filters["status"] = student_status
+
+        if education_form:
+            filters["education_form"] = education_form
 
         if faculty_ids:
             faculty_list = [int(f_id) for f_id in faculty_ids.split(",") if f_id.isdigit()]
