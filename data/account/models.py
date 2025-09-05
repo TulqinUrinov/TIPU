@@ -56,12 +56,44 @@ class SmsVerification(BaseModel):
     is_verified = models.BooleanField(default=False)
     expires_at = models.DateTimeField()
 
+    # yangi field
+    resend_available_at = models.DateTimeField(default=timezone.now)
+
     def save(self, *args, **kwargs):
         if not self.id:
             self.code = str(random.randint(100000, 999999))
             self.expires_at = timezone.now() + datetime.timedelta(minutes=5)
+            self.resend_available_at = timezone.now() + datetime.timedelta(seconds=60)
         super().save(*args, **kwargs)
 
     def is_expired(self):
         return timezone.now() > self.expires_at
 
+    def can_resend(self):
+        """Qayta yuborish mumkinmi"""
+        return timezone.now() >= self.resend_available_at
+
+    def seconds_left_for_resend(self):
+        """Qolgan sekundlarni qaytaradi"""
+        if self.can_resend():
+            return 0
+        delta = self.resend_available_at - timezone.now()
+        return int(delta.total_seconds())
+
+# class SmsVerification(BaseModel):
+#     phone_number = models.CharField(max_length=15, unique=True)
+#     jshshir = models.CharField(max_length=14, null=True, blank=True)
+#     password = models.CharField(max_length=128, null=True, blank=True)
+#
+#     code = models.CharField(max_length=6)
+#     is_verified = models.BooleanField(default=False)
+#     expires_at = models.DateTimeField()
+#
+#     def save(self, *args, **kwargs):
+#         if not self.id:
+#             self.code = str(random.randint(100000, 999999))
+#             self.expires_at = timezone.now() + datetime.timedelta(minutes=5)
+#         super().save(*args, **kwargs)
+#
+#     def is_expired(self):
+#         return timezone.now() > self.expires_at

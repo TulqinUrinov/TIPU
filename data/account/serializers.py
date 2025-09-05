@@ -74,6 +74,12 @@ class VerifySmsSerializer(serializers.Serializer):
         # studentni topamiz
         student = Student.objects.get(jshshir=sms.jshshir)
 
+        # Avval tekshiramiz: bu student allaqachon ro‘yxatdan o‘tganmi?
+        if StudentUser.objects.filter(student=student).exists():
+            raise serializers.ValidationError(
+                {"detail": "Bu JSHSHIR orqali student allaqachon ro‘yxatdan o‘tgan"}
+            )
+
         # StudentUser yaratamiz
         user = StudentUser.objects.create(
             student=student,

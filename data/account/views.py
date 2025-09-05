@@ -1,8 +1,13 @@
+import datetime
+import random
+
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from data.account.models import SmsVerification
 from data.account.serializers import (
     StudentUserLoginSerializer,
     StudentUserPasswordUpdateSerializer,
@@ -25,6 +30,35 @@ class SendSmsCodeAPIView(APIView):
 
             return Response({"phone_number": sms.phone_number, "message": "Tasdiqlash kodi yuborildi"})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResendSmsCodeAPIView(APIView):
+    def post(self, request):
+        phone_number = request.data.get("phone_number")
+        try:
+            sms = SmsVerification.objects.get(phone_number=phone_number, is_verified=False)
+        except SmsVerification.DoesNotExist:
+            return Response({"detail": "Bunday raqamga yuborilgan kod topilmadi"}, status=400)
+
+        # Tekshiramiz: qayta yuborish mumkinmi?
+        if not sms.can_resend():
+            return Response(
+                {
+                    "detail": f"Qayta yuborish uchun {sms.seconds_left_for_resend()} soniya kuting"
+                },
+                status=400
+            )
+
+        # Yangi kod beramiz
+        sms.code = str(random.randint(100000, 999999))
+        sms.expires_at = timezone.now() + datetime.timedelta(minutes=5)
+        sms.resend_available_at = timezone.now() + datetime.timedelta(seconds=120)
+        sms.save()
+
+        sms_service = SayqalSms()
+        sms_service.send_sms(sms.phone_number, f"Sizning tasdiqlash kodingiz: {sms.code}")
+
+        return Response({"message": "Yangi kod yuborildi"})
 
 
 class VerifySmsAndRegisterAPIView(APIView):
