@@ -67,3 +67,15 @@ class Student(BaseModel):
 
     def __str__(self):
         return self.full_name
+
+
+class PhoneNumber(BaseModel):
+    student: "Student" = models.ForeignKey(
+        "student.Student",
+        on_delete=models.CASCADE,
+        related_name="phone_numbers"
+    )
+    number = models.CharField(max_length=20, verbose_name="Telefon raqami")
+
+    def __str__(self):
+        return self.number

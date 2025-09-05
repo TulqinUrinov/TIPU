@@ -3,7 +3,7 @@ from django.db.models.functions import Coalesce, NullIf
 from rest_framework import serializers
 
 from data.payment.models import Payment, InstallmentPayment
-from data.student.models import Student
+from data.student.models import Student, PhoneNumber
 
 
 # Student List
@@ -67,10 +67,17 @@ class StudentEduYearSerializer(serializers.ModelSerializer):
         return max(overpaid, 0)  # agar ortiqcha bo‘lmasa 0 qaytadi
 
 
+class PhoneNumberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PhoneNumber
+        fields = ('id', 'student', 'number')
+
+
 # Retrieve
 class StudentSerializer(serializers.ModelSerializer):
     specialization = serializers.SerializerMethodField()
     phone_number = serializers.SerializerMethodField()
+    numbers = PhoneNumberSerializer(source='phone_numbers', many=True, read_only=True)
     contract = serializers.SerializerMethodField()
     total_paid = serializers.SerializerMethodField()
     left = serializers.SerializerMethodField()
@@ -85,6 +92,7 @@ class StudentSerializer(serializers.ModelSerializer):
             'jshshir',
             'specialization',
             'phone_number',
+            'numbers',
             'course',
             'group',
             'contract',

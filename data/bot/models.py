@@ -25,6 +25,8 @@ class BotUser(BaseModel):
 class TgPost(BaseModel):
     message = models.TextField(verbose_name="Xabar matni")
     file = models.FileField(upload_to="tg_posts/", null=True, blank=True, verbose_name="Media (rasm/video)")
+    scheduled_time = models.DateTimeField(null=True, blank=True, verbose_name="Yuborilish vaqti")
+    is_sent = models.BooleanField(default=False)
 
     def __str__(self):
         return f"TgPost #{self.id} - {self.message[:30]}"

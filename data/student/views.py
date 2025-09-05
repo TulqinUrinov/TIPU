@@ -2,7 +2,7 @@ import os
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, Border, Side
-from rest_framework import generics, filters, status
+from rest_framework import generics, filters, status, viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -233,6 +233,18 @@ class StudentDetailApiView(generics.RetrieveUpdateAPIView):
             return student
 
         raise PermissionDenied("Ruxsat yo‘q")
+
+
+class PhoneNumberViewSet(viewsets.ModelViewSet):
+    queryset = PhoneNumber.objects.all()
+    serializer_class = PhoneNumberSerializer
+    permission_classes = [IsAuthenticatedUserType]
+
+    def get_queryset(self):
+        student = self.request.query_params.get("student")
+        if student:
+            return PhoneNumber.objects.filter(student_id=student)
+        return super().get_queryset()
 
 
 # Statistics
