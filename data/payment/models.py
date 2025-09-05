@@ -39,8 +39,6 @@ class Payment(BaseModel):
     payment_date = models.DateTimeField(verbose_name="To'lov sanasi")
     purpose = models.TextField(verbose_name="To'lov maqsadi")
 
-    is_canceled = models.BooleanField(default=False)
-
 
 class InstallmentPayment(BaseModel):
     student = models.ForeignKey(
