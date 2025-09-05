@@ -1,7 +1,12 @@
+import datetime
+import random
+
 from django.contrib.auth.hashers import make_password, check_password
 
 from django.db import models
 from typing import TYPE_CHECKING
+
+from django.utils import timezone
 
 if TYPE_CHECKING:
     from data.student.models import Student
@@ -40,3 +45,23 @@ class StudentUser(BaseModel):
         """StudentUserni qayta tiklaydi."""
         super().restore()
         # Qo'shimcha logika kerak bo'lsa
+
+
+class SmsVerification(BaseModel):
+    phone_number = models.CharField(max_length=15, unique=True)
+    jshshir = models.CharField(max_length=14, null=True, blank=True)
+    password = models.CharField(max_length=128, null=True, blank=True)
+
+    code = models.CharField(max_length=6)
+    is_verified = models.BooleanField(default=False)
+    expires_at = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.code = str(random.randint(100000, 999999))
+            self.expires_at = timezone.now() + datetime.timedelta(minutes=5)
+        super().save(*args, **kwargs)
+
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+

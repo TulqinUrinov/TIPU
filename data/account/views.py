@@ -1,43 +1,53 @@
 from rest_framework import status
-
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from data.account.serializers import StudentUserLoginSerializer, StudentUserRegisterSerializer, \
-    StudentUserPasswordUpdateSerializer
-
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from data.account.serializers import (
+    StudentUserLoginSerializer,
+    StudentUserPasswordUpdateSerializer,
+    VerifySmsSerializer,
+    SendSmsCodeSerializer,
+)
 from data.common.permission import IsAuthenticatedUserType
+from sms import SayqalSms
 
 
-class StudentUserRegisterAPIView(APIView):
+class SendSmsCodeAPIView(APIView):
     def post(self, request):
-        serializer = StudentUserRegisterSerializer(data=request.data)
-
+        serializer = SendSmsCodeSerializer(data=request.data)
         if serializer.is_valid():
-            student_user = serializer.save()
-            print(student_user.id)
+            sms = serializer.save()
 
-            # Registratsiyadan so'ng avtomatik token yaratish
-            refresh = RefreshToken.for_user(student_user)
+            # SMS yuborish
+            sms_service = SayqalSms()
+            sms_service.send_sms(sms.phone_number, f"Sizning tasdiqlash kodingiz: {sms.code}")
+
+            return Response({"phone_number": sms.phone_number, "message": "Tasdiqlash kodi yuborildi"})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VerifySmsAndRegisterAPIView(APIView):
+    def post(self, request):
+        serializer = VerifySmsSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+
+            # JWT token qaytarish
+            refresh = RefreshToken.for_user(user)
             refresh['role'] = 'STUDENT'
-            refresh['student_user_id'] = str(student_user.id)
+            refresh['student_user_id'] = str(user.id)
 
-            # Access tokenga ham qo‘shish
             access = refresh.access_token
             access['role'] = 'STUDENT'
-            access['student_user_id'] = str(student_user.id)
+            access['student_user_id'] = str(user.id)
 
             return Response({
-                'access': str(access),
-                'refresh': str(refresh),
-            }, status=status.HTTP_201_CREATED)
+                "access": str(access),
+                "refresh": str(refresh),
+            })
 
-        return Response({
-            'success': False,
-            'errors': serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class StudentUserLoginAPIView(APIView):
@@ -138,3 +148,31 @@ class StudentUserPasswordUpdateAPIView(APIView):
             {"success": False, "errors": serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+# class StudentUserRegisterAPIView(APIView):
+#     def post(self, request):
+#         serializer = StudentUserRegisterSerializer(data=request.data)
+#
+#         if serializer.is_valid():
+#             student_user = serializer.save()
+#             print(student_user.id)
+#
+#             # Registratsiyadan so'ng avtomatik token yaratish
+#             refresh = RefreshToken.for_user(student_user)
+#             refresh['role'] = 'STUDENT'
+#             refresh['student_user_id'] = str(student_user.id)
+#
+#             # Access tokenga ham qo‘shish
+#             access = refresh.access_token
+#             access['role'] = 'STUDENT'
+#             access['student_user_id'] = str(student_user.id)
+#
+#             return Response({
+#                 'access': str(access),
+#                 'refresh': str(refresh),
+#             }, status=status.HTTP_201_CREATED)
+#
+#         return Response({
+#             'success': False,
+#             'errors': serializer.errors
+#         }, status=status.HTTP_400_BAD_REQUEST)
