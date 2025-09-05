@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import InstallmentPayment, Payment, ReminderConfig
+from .models import InstallmentPayment, Payment, ReminderConfig, ActionHistory
 
 
 # Bo'lib to'lash
@@ -52,6 +52,21 @@ class PaymentHistorySerializer(serializers.ModelSerializer):
             'payment_id',
             'amount',
             'payment_date',
+        )
+
+
+class ActionHistorySerializer(serializers.ModelSerializer):
+    canceled_by = serializers.CharField(source="canceled_by.full_name", allow_null=True)
+    student = serializers.CharField(source="student.full_name", allow_null=True)
+    class Meta:
+        model = ActionHistory
+        fields = (
+            'id',
+            'student',
+            'action_type',
+            'description',
+            'canceled_by',
+            'created_at',
         )
 
 

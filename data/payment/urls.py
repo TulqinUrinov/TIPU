@@ -5,7 +5,9 @@ from data.payment.views import (
     PaymentHistoryApiView,
     InstallmentPaymentBulkUpdateAPIView,
     InstallmentPaymentConfigAPIView,
-    ReminderConfigViewSet
+    ReminderConfigViewSet,
+    CancelPaymentAPIView,
+    StudentActionHistoryAPIView,
 )
 
 router = routers.DefaultRouter()
@@ -13,10 +15,14 @@ router.register(r"installments", InstallmentPaymentViewSet)
 router.register("reminder-configs", ReminderConfigViewSet, basename="reminder-configs")
 
 urlpatterns = [
-    path("bulk-update/", InstallmentPaymentBulkUpdateAPIView.as_view(),
-         name="installment-bulk-update"),
-    path('history/', PaymentHistoryApiView.as_view(), name='payment-history'),
-    path('settings/', InstallmentPaymentConfigAPIView.as_view()),
+                  path("bulk-update/", InstallmentPaymentBulkUpdateAPIView.as_view(),
+                       name="installment-bulk-update"),
+                  # Student to'lovlari tarixi
+                  path('history/', PaymentHistoryApiView.as_view(), name='payment-history'),
+                  path('settings/', InstallmentPaymentConfigAPIView.as_view()),
+                  # To'lovni bekor qilish
+                  path("cancel/<int:pk>/", CancelPaymentAPIView.as_view(), name="cancel-payment"),
+                  # Student action tarixlari
+                  path("actions/", StudentActionHistoryAPIView.as_view(), name="student-actions"),
 
-
-] + router.urls
+              ] + router.urls

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from data.payment.models import InstallmentPayment, Payment
+from data.payment.models import InstallmentPayment, Payment, ActionHistory
 
 
 @admin.register(InstallmentPayment)
@@ -17,6 +17,17 @@ class InstallmentPaymentAdmin(admin.ModelAdmin):
 class PaymentAdmin(admin.ModelAdmin):
     list_display = (
         'student',
+        'id',
         'amount',
         'payment_date',
+    )
+
+@admin.register(ActionHistory)
+class ActionHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        'student',
+        'action_type',
+        'description',
+        'canceled_by',
+        'created_at',
     )

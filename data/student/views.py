@@ -121,6 +121,8 @@ class StudentEduYearListApiView(generics.ListAPIView):
 class StudentEduYearExcelExportApiView(generics.GenericAPIView):
     permission_classes = [IsAuthenticatedUserType]
 
+    swagger_fake_view = True
+
     def get_queryset(self):
         edu_year = self.kwargs.get('edu_year')
         course = self.request.query_params.get('course')

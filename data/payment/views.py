@@ -9,9 +9,14 @@ from rest_framework.views import APIView
 from data.common.permission import IsAuthenticatedUserType
 
 from rest_framework import viewsets, mixins
-from .models import InstallmentPayment, Payment, ReminderConfig
-from .serializers import InstallmentPaymentSerializer, PaymentHistorySerializer, InstallmentBulkUpdateSerializer, \
-    ReminderConfigSerializer
+from .models import InstallmentPayment, Payment, ReminderConfig, ActionHistory
+from .serializers import (
+    InstallmentPaymentSerializer,
+    PaymentHistorySerializer,
+    InstallmentBulkUpdateSerializer,
+    ReminderConfigSerializer,
+    ActionHistorySerializer
+)
 
 
 # Bo'lib to'lash
@@ -34,6 +39,7 @@ class InstallmentPaymentViewSet(viewsets.ModelViewSet):
         return queryset
 
 
+# Barcha bo'lib to'lash sanasi va sonini o'zgartirish
 class InstallmentPaymentBulkUpdateAPIView(APIView):
     permission_classes = [IsAuthenticatedUserType]
 
@@ -123,6 +129,43 @@ class PaymentHistoryApiView(generics.ListAPIView):
         if student_jshshir:
             return queryset.filter(student__jshshir=student_jshshir).order_by("-payment_date")
         return queryset
+
+
+class CancelPaymentAPIView(APIView):
+    permission_classes = [IsAuthenticatedUserType]
+
+    def post(self, request, pk):
+        try:
+            payment = Payment.objects.get(pk=pk)
+        except Payment.DoesNotExist:
+            return Response({"error": "To'lov topilmadi"}, status=404)
+
+        student = payment.student
+        amount = payment.amount
+        payment_date = payment.payment_date
+
+        payment.delete()  # signal faqat qayta hisoblaydi
+
+        # endi history yozamiz
+        ActionHistory.objects.create(
+            student=student,
+            action_type="PAYMENT_CANCELED",
+            description=f"{amount} so'm to'lov bekor qilindi ({payment_date.date()})",
+            canceled_by=request.admin_user if request.admin_user else None
+        )
+
+        return Response({"success": True, "message": "To'lov bekor qilindi"})
+
+
+class StudentActionHistoryAPIView(generics.ListAPIView):
+    serializer_class = ActionHistorySerializer
+    permission_classes = [IsAuthenticatedUserType]
+
+    def get_queryset(self):
+        student_jshshir = self.request.GET.get("student")
+        if student_jshshir:
+            return ActionHistory.objects.filter(student__jshshir=student_jshshir).order_by("-created_at")
+        return ActionHistory.objects.none()
 
 
 # Eslatma sms xabari

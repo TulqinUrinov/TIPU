@@ -7,6 +7,7 @@ from data.common.models import BaseModel
 
 if TYPE_CHECKING:
     from data.student.models import Student
+    from data.user.models import AdminUser
 
 
 class Payment(BaseModel):
@@ -38,6 +39,8 @@ class Payment(BaseModel):
     payment_date = models.DateTimeField(verbose_name="To'lov sanasi")
     purpose = models.TextField(verbose_name="To'lov maqsadi")
 
+    is_canceled = models.BooleanField(default=False)
+
 
 class InstallmentPayment(BaseModel):
     student = models.ForeignKey(
@@ -67,3 +70,21 @@ class ReminderConfig(models.Model):
 
     def __str__(self):
         return f"{self.days_before} kun oldin"
+
+
+class ActionHistory(BaseModel):
+    action_choices = (
+        ("PAYMENT_CREATED", "Payment created"),
+        ("PAYMENT_CANCELED", "Payment canceled"),
+        ("INSTALLMENT_UPDATED", "Installment updates"),
+    )
+
+    student: "Student" = models.ForeignKey("student.Student", on_delete=models.CASCADE, related_name="actions")
+    action_type = models.CharField(max_length=50, choices=action_choices)
+    description = models.TextField()
+    canceled_by: "AdminUser" = models.ForeignKey(
+        "user.AdminUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
