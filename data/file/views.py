@@ -52,7 +52,13 @@ class ContractDownloadApiView(views.APIView):
         )
 
 
-# Yuklangan excel filelardagi ma'lumotlarni o'chirish
+# O'chirilgan excel filelar tarixi
+class FileDeleteHistoryListAPIView(ListAPIView):
+    permission_classes = [IsAuthenticatedUserType]
+    queryset = FileDeleteHistory.objects.all()
+    serializer_class = FileDeleteHistorySerializer
+
+
 class FileDeleteAPIView(APIView):
     permission_classes = [IsAuthenticatedUserType]
 
@@ -71,6 +77,7 @@ class FileDeleteAPIView(APIView):
             # Ma'lumotlarni sanab olish
             deleted_data_count = {
                 'students': file_obj.students.count(),
+                'phone_students': file_obj.phone_students.count(),
                 'contracts': file_obj.contracts.count(),
                 'payments': file_obj.payments.count(),
                 'specializations': file_obj.specializations.count(),
@@ -81,15 +88,19 @@ class FileDeleteAPIView(APIView):
             file_obj.payments.all().delete()
             file_obj.contracts.all().delete()
 
-            # Studentlarni o'chirish (boshqa fayllardan kelgan studentlarni saqlab qolish)
+            # Asosiy studentlarni o'chirish
             for student in file_obj.students.all():
-                # Agar student boshqa fayllarga ham bog'langan bo'lsa, source_file ni null qilish
                 if student.payments.exists() or student.contract.exists():
                     student.source_file = None
                     student.save()
                 else:
-                    # Agar faqat shu faylga bog'langan bo'lsa, o'chirish
                     student.delete()
+
+            # Telefon raqami yangilangan studentlarni qaytarish
+            for student in file_obj.phone_students.all():
+                student.phone_number = None
+                student.phone_source_file = None
+                student.save()
 
             # Mutaxassisliklarni o'chirish (boshqa fayllardan kelganlarni saqlab qolish)
             for specialization in file_obj.specializations.all():
@@ -124,9 +135,75 @@ class FileDeleteAPIView(APIView):
             "deleted_data_count": deleted_data_count
         }, status=status.HTTP_200_OK)
 
-
-# O'chirilgan excel filelar tarixi
-class FileDeleteHistoryListAPIView(ListAPIView):
-    permission_classes = [IsAuthenticatedUserType]
-    queryset = FileDeleteHistory.objects.all()
-    serializer_class = FileDeleteHistorySerializer
+# # Yuklangan excel filelardagi ma'lumotlarni o'chirish
+# class FileDeleteAPIView(APIView):
+#     permission_classes = [IsAuthenticatedUserType]
+#
+#     def post(self, request, file_id):
+#         try:
+#             file_obj = Files.objects.get(id=file_id)
+#         except Files.DoesNotExist:
+#             return Response(
+#                 {"error": "File topilmadi"},
+#                 status=status.HTTP_404_NOT_FOUND
+#             )
+#
+#         reason = request.data.get('reason', '')
+#
+#         with transaction.atomic():
+#             # Ma'lumotlarni sanab olish
+#             deleted_data_count = {
+#                 'students': file_obj.students.count(),
+#                 'contracts': file_obj.contracts.count(),
+#                 'payments': file_obj.payments.count(),
+#                 'specializations': file_obj.specializations.count(),
+#                 'faculties': file_obj.faculties.count()
+#             }
+#
+#             # Ma'lumotlarni o'chirish
+#             file_obj.payments.all().delete()
+#             file_obj.contracts.all().delete()
+#
+#             # Studentlarni o'chirish (boshqa fayllardan kelgan studentlarni saqlab qolish)
+#             for student in file_obj.students.all():
+#                 # Agar student boshqa fayllarga ham bog'langan bo'lsa, source_file ni null qilish
+#                 if student.payments.exists() or student.contract.exists():
+#                     student.source_file = None
+#                     student.save()
+#                 else:
+#                     # Agar faqat shu faylga bog'langan bo'lsa, o'chirish
+#                     student.delete()
+#
+#             # Mutaxassisliklarni o'chirish (boshqa fayllardan kelganlarni saqlab qolish)
+#             for specialization in file_obj.specializations.all():
+#                 if specialization.students.exists():
+#                     specialization.source_file = None
+#                     specialization.save()
+#                 else:
+#                     specialization.delete()
+#
+#             # Fakultetlarni o'chirish (boshqa fayllardan kelganlarni saqlab qolish)
+#             for faculty in file_obj.faculties.all():
+#                 if faculty.specializations.exists():
+#                     faculty.source_file = None
+#                     faculty.save()
+#                 else:
+#                     faculty.delete()
+#
+#             # History yozish
+#             FileDeleteHistory.objects.create(
+#                 file=file_obj,
+#                 deleted_by=request.admin_user,
+#                 deleted_data_count=deleted_data_count,
+#                 reason=reason
+#             )
+#
+#             # Faylni o'chirish (soft delete)
+#             file_obj.soft_delete()
+#
+#         return Response({
+#             "success": True,
+#             "message": "File va tegishli ma'lumotlar o'chirildi",
+#             "deleted_data_count": deleted_data_count
+#         }, status=status.HTTP_200_OK)
+#

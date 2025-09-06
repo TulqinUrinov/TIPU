@@ -22,6 +22,15 @@ class Student(BaseModel):
         related_name="students"
     )
 
+    phone_source_file: "Files" = models.ForeignKey(
+        "file.Files",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="phone_students",
+        verbose_name="Telefon raqami yangilangan fayl"
+    )
+
     picture = models.ImageField(
         upload_to="pictures",
         null=True,

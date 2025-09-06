@@ -43,7 +43,7 @@ class ImportStudentsAPIView(APIView):
 
         try:
             # Import qilish
-            result = import_students_from_excel(tmp_file_path, education_year,saved_file)
+            result = import_students_from_excel(tmp_file_path, education_year, saved_file)
 
             # Vaqtincha faylni o'chirish
             os.unlink(tmp_file_path)
@@ -162,25 +162,92 @@ class StudentPhoneUploadAPIView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # Faylni vaqtincha saqlash
-        with open('temp_upload.xlsx', 'wb+') as destination:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             for chunk in excel_file.chunks():
-                destination.write(chunk)
+                tmp_file.write(chunk)
+            tmp_file_path = tmp_file.name
 
-        # Import qilish
-        success, result = import_phone_numbers_from_excel('temp_upload.xlsx')
+        try:
+            # Import qilish - source_file parametrini qo'shish
+            success, result = import_phone_numbers_from_excel(tmp_file_path, saved_file)
 
-        if success:
-            return Response({
-                'success': True,
-                'message': result,
-                'updated_count': int(result.split()[0]),
-                'file_url': saved_file.file.url,  # yuklangan fayl linki
-                'uploaded_at': saved_file.created_at,
-            }, status=status.HTTP_200_OK)
-        else:
+            # Vaqtincha faylni o'chirish
+            os.unlink(tmp_file_path)
+
+            if success:
+                return Response({
+                    'success': True,
+                    'message': result,
+                    'updated_count': int(result.split()[0]),
+                    'file_url': saved_file.file.url,  # yuklangan fayl linki
+                    'uploaded_at': saved_file.created_at,
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    'success': False,
+                    'errors': result,
+                    'error_count': len(result),
+                    'file_url': saved_file.file.url,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            # Agar fayl mavjud bo'lsa, o'chirish
+            if os.path.exists(tmp_file_path):
+                os.unlink(tmp_file_path)
+
             return Response({
                 'success': False,
-                'errors': result,
-                'error_count': len(result),
-                'file_url': saved_file.file.url,
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'error': f'Import jarayonida xato: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# class StudentPhoneUploadAPIView(APIView):
+#     permission_classes = [IsAuthenticatedUserType]
+#
+#     def post(self, request):
+#         """
+#         Excel fayl orqali studentlarning telefon raqamlarini yangilash
+#         """
+#
+#         if 'excel_file' not in request.FILES:
+#             return Response({
+#                 'success': False,
+#                 'error': 'Excel fayl yuklanmadi'
+#             }, status=status.HTTP_400_BAD_REQUEST)
+#
+#         excel_file = request.FILES['excel_file']
+#         # Faylni Files modeliga saqlash (tarix uchun)
+#         saved_file = Files.objects.create(
+#             file=excel_file,
+#             uploaded_by=request.admin_user
+#         )
+#
+#         # Fayl turini tekshirish
+#         if not excel_file.name.endswith(('.xlsx', '.xls')):
+#             return Response({
+#                 'success': False,
+#                 'error': 'Faqat .xlsx yoki .xls formatidagi fayllar qabul qilinadi'
+#             }, status=status.HTTP_400_BAD_REQUEST)
+#
+#         # Faylni vaqtincha saqlash
+#         with open('temp_upload.xlsx', 'wb+') as destination:
+#             for chunk in excel_file.chunks():
+#                 destination.write(chunk)
+#
+#         # Import qilish
+#         success, result = import_phone_numbers_from_excel('temp_upload.xlsx')
+#
+#         if success:
+#             return Response({
+#                 'success': True,
+#                 'message': result,
+#                 'updated_count': int(result.split()[0]),
+#                 'file_url': saved_file.file.url,  # yuklangan fayl linki
+#                 'uploaded_at': saved_file.created_at,
+#             }, status=status.HTTP_200_OK)
+#         else:
+#             return Response({
+#                 'success': False,
+#                 'errors': result,
+#                 'error_count': len(result),
+#                 'file_url': saved_file.file.url,
+#             }, status=status.HTTP_400_BAD_REQUEST)

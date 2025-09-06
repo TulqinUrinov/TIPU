@@ -343,6 +343,134 @@ def import_payments_from_excel(file_path, education_year, source_file=None):
     }
 
 
+def import_phone_numbers_from_excel(file_path, source_file=None):
+    """
+    Excel fayldan telefon raqamlarini o'qib, studentlarni yangilaydi
+    """
+    try:
+        # Excel faylni yuklash (birinchi qator sarlavha emas)
+        df = pd.read_excel(file_path, header=None)
+
+        errors = []
+        updates = []
+        found_count = 0
+        not_found_count = 0
+
+        # Avval bazadagi barcha JSHSHIRlarni olish
+        existing_jshshirs = set(Student.objects.values_list('jshshir', flat=True))
+
+        # Har bir qatorni tekshirish (1-qatordan boshlanadi, 0-index sarlavha)
+        for index, row in df.iterrows():
+            # 1-qatorni (index=0) o'tkazib yuboramiz - bu sarlavha qatori
+            if index == 0:
+                continue
+
+            try:
+                # Index bo'yicha ustunlarni olish
+                jshshir = str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) else None  # 1-ustun: JSHSHIR
+                phone_number = str(row.iloc[4]).strip() if pd.notna(row.iloc[4]) else None  # 4-ustun: Telefon raqami
+
+                # Ma'lumotlarni tekshirish
+                if not jshshir or jshshir == 'nan':
+                    errors.append(f"{index + 1}-qator: JSHSHIR bo'sh yoki noto'g'ri format")
+                    continue
+
+                if not phone_number or phone_number == 'nan':
+                    errors.append(f"{index + 1}-qator: Telefon raqami bo'sh (JSHSHIR: {jshshir})")
+                    continue
+
+                # JSHSHIR dan qo'shimcha belgilarni tozalash
+                jshshir = clean_jshshir(jshshir)
+                if not jshshir:
+                    errors.append(f"{index + 1}-qator: JSHSHIR noto'g'ri format")
+                    continue
+
+                # Telefon raqamini formatlash
+                phone_number = normalize_phone_number(phone_number)
+                if not phone_number:
+                    errors.append(f"{index + 1}-qator: Noto'g'ri telefon raqami formati (JSHSHIR: {jshshir})")
+                    continue
+
+                # JSHSHIR bazada mavjudligini tekshirish
+                if jshshir not in existing_jshshirs:
+                    not_found_count += 1
+                    continue  # Bazada yo'q bo'lsa, o'tkazib yuboramiz
+
+                # Studentni topish va yangilash
+                try:
+                    student = Student.objects.get(jshshir=jshshir)
+                    student.phone_number = phone_number
+
+                    # Agar source_file berilgan bo'lsa, telefon raqami source_file ni ham yangilash
+                    if source_file:
+                        student.phone_source_file = source_file
+
+                    updates.append(student)
+                    found_count += 1
+                except Student.DoesNotExist:
+                    not_found_count += 1
+                except Student.MultipleObjectsReturned:
+                    errors.append(f"{index + 1}-qator: JSHSHIR '{jshshir}' bo'yicha bir nechta student topildi")
+
+            except Exception as e:
+                errors.append(f"{index + 1}-qator: Qayta ishlash xatosi - {str(e)}")
+                continue
+
+        # Agar xatoliklar bo'lsa, yangilamaymiz
+        if errors:
+            return False, errors
+
+        # Barcha yangilanishlarni bir transactionda bajarish
+        with transaction.atomic():
+            # Agar source_file berilgan bo'lsa, ikkala fieldni ham yangilash
+            if source_file:
+                Student.objects.bulk_update(updates, ['phone_number', 'phone_source_file'])
+            else:
+                Student.objects.bulk_update(updates, ['phone_number'])
+
+        success_message = (
+            f"{len(updates)} ta studentning telefon raqami yangilandi. "
+            f"{not_found_count} ta JSHSHIR bazada topilmadi."
+        )
+
+        return True, success_message
+
+    except Exception as e:
+        return False, [f"Faylni qayta ishlashda xatosi: {str(e)}"]
+
+
+def clean_jshshir(jshshir):
+    """JSHSHIR dan qo'shimcha belgilarni tozalash"""
+    if not jshshir:
+        return None
+
+    # Qo'shtirnoq, bosh joy va maxsus belgilarni olib tashlash
+    jshshir = jshshir.replace('"', '').replace("'", "").replace("`", "").strip()
+    jshshir = ''.join(filter(lambda x: x.isalnum(), jshshir))
+    return jshshir
+
+
+def normalize_phone_number(phone):
+    """Telefon raqamini standart formatga keltirish"""
+    if not phone:
+        return None
+
+    # Faqat raqamlarni saqlash
+    phone = ''.join(filter(str.isdigit, str(phone)))
+
+    # Qo'shimcha tozalash
+    phone = phone.replace(' ', '').replace('-', '').replace('+', '')
+
+    # Uzbekistan telefon raqamlari uchun formatlash
+    if phone.startswith('998') and len(phone) == 12:
+        return phone
+    elif phone.startswith('8') and len(phone) == 11:
+        return '998' + phone[1:]
+    elif phone.startswith('9') and len(phone) == 9:
+        return '998' + phone
+    else:
+        return None
+
 # def import_students_from_excel(file_path, education_year, source_file=None):
 #     """
 #     Excel fayldan ma'lumotlarni import qiladi.
@@ -610,121 +738,121 @@ def import_payments_from_excel(file_path, education_year, source_file=None):
 #         }
 
 
-def import_phone_numbers_from_excel(file_path):
-    """
-    Excel fayldan telefon raqamlarini o'qib, studentlarni yangilaydi
-    """
-    try:
-        # Excel faylni yuklash (birinchi qator sarlavha emas)
-        df = pd.read_excel(file_path, header=None)
-
-        errors = []
-        updates = []
-        found_count = 0
-        not_found_count = 0
-
-        # Avval bazadagi barcha JSHSHIRlarni olish
-        existing_jshshirs = set(Student.objects.values_list('jshshir', flat=True))
-
-        # Har bir qatorni tekshirish (1-qatordan boshlanadi, 0-index sarlavha)
-        for index, row in df.iterrows():
-            # 1-qatorni (index=0) o'tkazib yuboramiz - bu sarlavha qatori
-            if index == 0:
-                continue
-
-            try:
-                # Index bo'yicha ustunlarni olish
-                jshshir = str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) else None  # 1-ustun: JSHSHIR
-                phone_number = str(row.iloc[4]).strip() if pd.notna(row.iloc[4]) else None  # 4-ustun: Telefon raqami
-
-                # Ma'lumotlarni tekshirish
-                if not jshshir or jshshir == 'nan':
-                    errors.append(f"{index + 1}-qator: JSHSHIR bo'sh yoki noto'g'ri format")
-                    continue
-
-                if not phone_number or phone_number == 'nan':
-                    errors.append(f"{index + 1}-qator: Telefon raqami bo'sh (JSHSHIR: {jshshir})")
-                    continue
-
-                # JSHSHIR dan qo'shimcha belgilarni tozalash
-                jshshir = clean_jshshir(jshshir)
-                if not jshshir:
-                    errors.append(f"{index + 1}-qator: JSHSHIR noto'g'ri format")
-                    continue
-
-                # Telefon raqamini formatlash
-                phone_number = normalize_phone_number(phone_number)
-                if not phone_number:
-                    errors.append(f"{index + 1}-qator: Noto'g'ri telefon raqami formati (JSHSHIR: {jshshir})")
-                    continue
-
-                # JSHSHIR bazada mavjudligini tekshirish
-                if jshshir not in existing_jshshirs:
-                    not_found_count += 1
-                    continue  # Bazada yo'q bo'lsa, o'tkazib yuboramiz
-
-                # Studentni topish va yangilash
-                try:
-                    student = Student.objects.get(jshshir=jshshir)
-                    student.phone_number = phone_number
-                    updates.append(student)
-                    found_count += 1
-                except Student.DoesNotExist:
-                    not_found_count += 1
-                except Student.MultipleObjectsReturned:
-                    errors.append(f"{index + 1}-qator: JSHSHIR '{jshshir}' bo'yicha bir nechta student topildi")
-
-            except Exception as e:
-                errors.append(f"{index + 1}-qator: Qayta ishlash xatosi - {str(e)}")
-                continue
-
-        # Agar xatoliklar bo'lsa, yangilamaymiz
-        if errors:
-            return False, errors
-
-        # Barcha yangilanishlarni bir transactionda bajarish
-        with transaction.atomic():
-            Student.objects.bulk_update(updates, ['phone_number'])
-
-        success_message = (
-            f"{len(updates)} ta studentning telefon raqami yangilandi. "
-            f"{not_found_count} ta JSHSHIR bazada topilmadi."
-        )
-
-        return True, success_message
-
-    except Exception as e:
-        return False, [f"Faylni qayta ishlashda xatosi: {str(e)}"]
-
-
-def clean_jshshir(jshshir):
-    """JSHSHIR dan qo'shimcha belgilarni tozalash"""
-    if not jshshir:
-        return None
-
-    # Qo'shtirnoq, bosh joy va maxsus belgilarni olib tashlash
-    jshshir = jshshir.replace('"', '').replace("'", "").replace("`", "").strip()
-    jshshir = ''.join(filter(lambda x: x.isalnum(), jshshir))
-    return jshshir
-
-
-def normalize_phone_number(phone):
-    """Telefon raqamini standart formatga keltirish"""
-    if not phone:
-        return None
-
-    # Faqat raqamlarni saqlash
-    phone = ''.join(filter(str.isdigit, str(phone)))
-
-    # Qo'shimcha tozalash
-    phone = phone.replace(' ', '').replace('-', '').replace('+', '')
-
-    # Uzbekistan telefon raqamlari uchun formatlash
-    if phone.startswith('998') and len(phone) == 12:
-        return phone
-    elif phone.startswith('8') and len(phone) == 11:
-        return '998' + phone[1:]
-    elif phone.startswith('9') and len(phone) == 9:
-        return '998' + phone
-    else:
-        return None
+# def import_phone_numbers_from_excel(file_path):
+#     """
+#     Excel fayldan telefon raqamlarini o'qib, studentlarni yangilaydi
+#     """
+#     try:
+#         # Excel faylni yuklash (birinchi qator sarlavha emas)
+#         df = pd.read_excel(file_path, header=None)
+#
+#         errors = []
+#         updates = []
+#         found_count = 0
+#         not_found_count = 0
+#
+#         # Avval bazadagi barcha JSHSHIRlarni olish
+#         existing_jshshirs = set(Student.objects.values_list('jshshir', flat=True))
+#
+#         # Har bir qatorni tekshirish (1-qatordan boshlanadi, 0-index sarlavha)
+#         for index, row in df.iterrows():
+#             # 1-qatorni (index=0) o'tkazib yuboramiz - bu sarlavha qatori
+#             if index == 0:
+#                 continue
+#
+#             try:
+#                 # Index bo'yicha ustunlarni olish
+#                 jshshir = str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) else None  # 1-ustun: JSHSHIR
+#                 phone_number = str(row.iloc[4]).strip() if pd.notna(row.iloc[4]) else None  # 4-ustun: Telefon raqami
+#
+#                 # Ma'lumotlarni tekshirish
+#                 if not jshshir or jshshir == 'nan':
+#                     errors.append(f"{index + 1}-qator: JSHSHIR bo'sh yoki noto'g'ri format")
+#                     continue
+#
+#                 if not phone_number or phone_number == 'nan':
+#                     errors.append(f"{index + 1}-qator: Telefon raqami bo'sh (JSHSHIR: {jshshir})")
+#                     continue
+#
+#                 # JSHSHIR dan qo'shimcha belgilarni tozalash
+#                 jshshir = clean_jshshir(jshshir)
+#                 if not jshshir:
+#                     errors.append(f"{index + 1}-qator: JSHSHIR noto'g'ri format")
+#                     continue
+#
+#                 # Telefon raqamini formatlash
+#                 phone_number = normalize_phone_number(phone_number)
+#                 if not phone_number:
+#                     errors.append(f"{index + 1}-qator: Noto'g'ri telefon raqami formati (JSHSHIR: {jshshir})")
+#                     continue
+#
+#                 # JSHSHIR bazada mavjudligini tekshirish
+#                 if jshshir not in existing_jshshirs:
+#                     not_found_count += 1
+#                     continue  # Bazada yo'q bo'lsa, o'tkazib yuboramiz
+#
+#                 # Studentni topish va yangilash
+#                 try:
+#                     student = Student.objects.get(jshshir=jshshir)
+#                     student.phone_number = phone_number
+#                     updates.append(student)
+#                     found_count += 1
+#                 except Student.DoesNotExist:
+#                     not_found_count += 1
+#                 except Student.MultipleObjectsReturned:
+#                     errors.append(f"{index + 1}-qator: JSHSHIR '{jshshir}' bo'yicha bir nechta student topildi")
+#
+#             except Exception as e:
+#                 errors.append(f"{index + 1}-qator: Qayta ishlash xatosi - {str(e)}")
+#                 continue
+#
+#         # Agar xatoliklar bo'lsa, yangilamaymiz
+#         if errors:
+#             return False, errors
+#
+#         # Barcha yangilanishlarni bir transactionda bajarish
+#         with transaction.atomic():
+#             Student.objects.bulk_update(updates, ['phone_number'])
+#
+#         success_message = (
+#             f"{len(updates)} ta studentning telefon raqami yangilandi. "
+#             f"{not_found_count} ta JSHSHIR bazada topilmadi."
+#         )
+#
+#         return True, success_message
+#
+#     except Exception as e:
+#         return False, [f"Faylni qayta ishlashda xatosi: {str(e)}"]
+#
+#
+# def clean_jshshir(jshshir):
+#     """JSHSHIR dan qo'shimcha belgilarni tozalash"""
+#     if not jshshir:
+#         return None
+#
+#     # Qo'shtirnoq, bosh joy va maxsus belgilarni olib tashlash
+#     jshshir = jshshir.replace('"', '').replace("'", "").replace("`", "").strip()
+#     jshshir = ''.join(filter(lambda x: x.isalnum(), jshshir))
+#     return jshshir
+#
+#
+# def normalize_phone_number(phone):
+#     """Telefon raqamini standart formatga keltirish"""
+#     if not phone:
+#         return None
+#
+#     # Faqat raqamlarni saqlash
+#     phone = ''.join(filter(str.isdigit, str(phone)))
+#
+#     # Qo'shimcha tozalash
+#     phone = phone.replace(' ', '').replace('-', '').replace('+', '')
+#
+#     # Uzbekistan telefon raqamlari uchun formatlash
+#     if phone.startswith('998') and len(phone) == 12:
+#         return phone
+#     elif phone.startswith('8') and len(phone) == 11:
+#         return '998' + phone[1:]
+#     elif phone.startswith('9') and len(phone) == 9:
+#         return '998' + phone
+#     else:
+#         return None

@@ -11,6 +11,7 @@ class StudentAdmin(admin.ModelAdmin):
         'jshshir',
         'phone_number',
         'source_file',
+        'phone_source_file',
         'specialization',
         'course',
         'education_type',
