@@ -26,13 +26,13 @@ def on_payment_save(sender, instance, created, **kwargs):
         if contract:
             add_contract_balance(contract, instance.amount)
 
-        # history yozish
-        ActionHistory.objects.create(
-            student=student,
-            action_type="PAYMENT_CREATED",
-            description=f"{instance.amount} so'm to'lov qo'shildi ({instance.payment_date.date()})",
-            changed_by=None  # agar signal bo‘lsa, kim qo‘shganini bilmaymiz
-        )
+        # # history yozish
+        # ActionHistory.objects.create(
+        #     student=student,
+        #     action_type="PAYMENT_CREATED",
+        #     description=f"{instance.amount} so'm to'lov qo'shildi ({instance.payment_date.date()})",
+        #     changed_by=None  # agar signal bo‘lsa, kim qo‘shganini bilmaymiz
+        # )
 
         InstallmentPayment.objects.filter(student=student).update(custom=True)
 
