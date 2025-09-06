@@ -9,4 +9,5 @@ class SpecializationAdmin(admin.ModelAdmin):
         'name',
         'faculty',
         'code',
+        'source_file',
     )

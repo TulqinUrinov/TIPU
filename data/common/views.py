@@ -43,7 +43,7 @@ class ImportStudentsAPIView(APIView):
 
         try:
             # Import qilish
-            result = import_students_from_excel(tmp_file_path, education_year)
+            result = import_students_from_excel(tmp_file_path, education_year,saved_file)
 
             # Vaqtincha faylni o'chirish
             os.unlink(tmp_file_path)
@@ -106,7 +106,7 @@ class ImportPaymentsAPIView(APIView):
             tmp_file_path = tmp_file.name
 
         # Import qilish
-        result = import_payments_from_excel(tmp_file_path, education_year)
+        result = import_payments_from_excel(tmp_file_path, education_year, saved_file)
 
         # Vaqtincha faylni o'chirish
         os.unlink(tmp_file_path)

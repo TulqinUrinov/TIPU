@@ -20,7 +20,9 @@ class PaymentAdmin(admin.ModelAdmin):
         'id',
         'amount',
         'payment_date',
+        'source_file',
     )
+
 
 @admin.register(ActionHistory)
 class ActionHistoryAdmin(admin.ModelAdmin):

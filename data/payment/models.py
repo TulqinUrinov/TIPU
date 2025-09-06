@@ -8,6 +8,7 @@ from data.common.models import BaseModel
 if TYPE_CHECKING:
     from data.student.models import Student
     from data.user.models import AdminUser
+    from data.file.models import Files
 
 
 class Payment(BaseModel):
@@ -17,6 +18,14 @@ class Payment(BaseModel):
         related_name="payments",
         to_field="jshshir",  # JSHSHIR bo'yicha bog'lash
         db_column="jshshir"  # Ma'lumotlar bazasida ustun nomi
+    )
+
+    source_file: "Files" = models.ForeignKey(
+        "file.Files",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments"
     )
 
     contract_number = models.CharField(

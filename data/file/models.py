@@ -28,7 +28,7 @@ class Files(BaseModel):
     )
 
     def __str__(self):
-        return self.uploaded_by.full_name if self.uploaded_by else "No uploader"
+        return self.file.name
 
 
 class ContractFiles(BaseModel):
@@ -42,3 +42,25 @@ class ContractFiles(BaseModel):
 
     def __str__(self):
         return f"{self.student.full_name} shartnomasi"
+
+
+class FileDeleteHistory(BaseModel):
+    file = models.ForeignKey(
+        "file.Files",
+        on_delete=models.CASCADE,
+        related_name="delete_history"
+    )
+    deleted_by: "AdminUser" = models.ForeignKey(
+        "user.AdminUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    deleted_data_count = models.JSONField(
+        default=dict,
+        help_text="O'chirilgan ma'lumotlar soni (students, contracts, payments)"
+    )
+    reason = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.file} - {self.deleted_by}"

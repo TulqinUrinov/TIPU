@@ -1,14 +1,12 @@
-from decimal import Decimal
-
 from django.db import models
 from typing import TYPE_CHECKING
 
 from data.common.models import BaseModel
-
 from data.payment.models import InstallmentPayment
 
 if TYPE_CHECKING:
     from data.student.models import Student
+    from data.file.models import Files
 
 
 class Contract(BaseModel):
@@ -16,6 +14,14 @@ class Contract(BaseModel):
         "student.Student",
         on_delete=models.CASCADE,
         related_name="contract"
+    )
+
+    source_file: "Files" = models.ForeignKey(
+        "file.Files",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="contracts"
     )
 
     contract_type = models.CharField(

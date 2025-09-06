@@ -5,12 +5,21 @@ from data.common.models import BaseModel
 
 if TYPE_CHECKING:
     from data.specialization.models import Specialization
+    from data.file.models import Files
 
 
 class Student(BaseModel):
     full_name = models.CharField(
         max_length=255,
         verbose_name="Talaba F.I.Sh"
+    )
+
+    source_file: "Files" = models.ForeignKey(
+        "file.Files",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="students"
     )
 
     picture = models.ImageField(

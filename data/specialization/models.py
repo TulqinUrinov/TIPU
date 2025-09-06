@@ -5,6 +5,7 @@ from data.common.models import BaseModel
 
 if TYPE_CHECKING:
     from data.faculty.models import Faculty
+    from data.file.models import Files
 
 
 class Specialization(BaseModel):
@@ -23,6 +24,14 @@ class Specialization(BaseModel):
     faculty: "Faculty" = models.ForeignKey(
         "faculty.Faculty",
         on_delete=models.CASCADE,
+        related_name="specializations"
+    )
+
+    source_file: "Files" = models.ForeignKey(
+        "file.Files",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="specializations"
     )
 

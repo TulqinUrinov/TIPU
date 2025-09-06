@@ -8,6 +8,7 @@ class FacultyAdmin(admin.ModelAdmin):
     list_display = (
         'name',
         'id',
+        'source_file',
     )
 
 
