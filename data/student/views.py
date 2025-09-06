@@ -253,6 +253,13 @@ class PhoneNumberViewSet(viewsets.ModelViewSet):
 class StudentStatisticsApiView(APIView):
     permission_classes = [IsAuthenticatedUserType]
 
+    STATUS_MAP = {
+        "STUDYING": "O‘qimoqda",
+        "EXPELLED": "Chetlashgan",
+        "GRADUATED": "Bitirgan",
+        "ACADEMIC_LEAVE": "Akademik ta’til",
+    }
+
     def get(self, request, edu_year):
         course = request.query_params.get("course")  # masalan: ?course=1-kurs
         faculty_ids = request.query_params.get("faculty")  # masalan: ?faculty=1,2,3
@@ -266,7 +273,11 @@ class StudentStatisticsApiView(APIView):
             filters["course"] = course
 
         if student_status:
-            filters["status"] = student_status
+            # filters["status"] = student_status
+            print(student_status)
+            uzbek_status = self.STATUS_MAP.get(student_status.upper())  # map qilamiz
+            if uzbek_status:
+                filters["status"] = uzbek_status
 
         if education_form:
             filters["education_form"] = education_form
