@@ -1,7 +1,7 @@
-from rest_framework import generics, permissions
+from rest_framework import generics
 from .models import Comment
 from .serializers import CommentSerializer
-from ..common.permission import IsAuthenticatedUserType
+from data.common.permission import IsAuthenticatedUserType
 
 
 class CommentCreateAPIView(generics.CreateAPIView):

@@ -4,7 +4,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from data.bot.models import TgPost, BotUser
+from data.bot.models import TgPost
 from data.bot.serializers import TgPostSerializer
 from data.common.permission import IsAuthenticatedUserType
 

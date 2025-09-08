@@ -1,7 +1,6 @@
 import datetime
 import random
 
-from django.core.serializers import serialize
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response

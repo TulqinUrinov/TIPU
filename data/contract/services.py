@@ -1,5 +1,5 @@
-from django.db import connection
 from decimal import Decimal
+from django.db import connection
 from django.db import transaction
 from data.contract.models import Contract
 from data.contract.models import ContractBalance

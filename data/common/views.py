@@ -1,12 +1,18 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-import tempfile
 import os
-from data.common.import_excel import import_students_from_excel, import_payments_from_excel, \
-    import_phone_numbers_from_excel
+import tempfile
+
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from data.common.import_excel import (
+    import_students_from_excel,
+    import_payments_from_excel,
+    import_phone_numbers_from_excel,
+)
 from data.common.permission import IsAuthenticatedUserType
 from data.file.models import Files
+
 
 
 class ImportStudentsAPIView(APIView):
