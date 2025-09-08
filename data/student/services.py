@@ -10,6 +10,15 @@ from data.student.models import Student
 class StudentFilterService:
     @staticmethod
     def filter_students(request, edu_year):
+
+        STATUS_MAP = {
+
+            "STUDYING": "O‘qimoqda",
+            "EXPELLED": "Chetlashgan",
+            "GRADUATED": "Bitirgan",
+            "ACADEMIC_LEAVE": "Akademik ta’til",
+        }
+
         course = request.query_params.get('course')
         faculty_ids = request.query_params.get('faculty')
         specialization_ids = request.query_params.get('specialization')
@@ -43,8 +52,14 @@ class StudentFilterService:
             queryset = queryset.filter(course=course)
 
         # Student statusi bo'yicha filter
+
         if status:
-            queryset = queryset.filter(status=status)
+            uzbek_status = STATUS_MAP.get(status.upper())  # map qilamiz
+            if uzbek_status:
+                queryset = queryset.filter(status=uzbek_status)
+
+        # if status:
+        #     queryset = queryset.filter(status=status)
 
         if education_form:
             queryset = queryset.filter(education_form=education_form)
