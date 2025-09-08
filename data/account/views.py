@@ -1,6 +1,7 @@
 import datetime
 import random
 
+from django.core.serializers import serialize
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
@@ -12,7 +13,7 @@ from data.account.serializers import (
     StudentUserLoginSerializer,
     StudentUserPasswordUpdateSerializer,
     VerifySmsSerializer,
-    SendSmsCodeSerializer,
+    SendSmsCodeSerializer, ForgotPasswordSendSmsSerializer, ForgotPasswordVerifySerializer,
 )
 from data.common.permission import IsAuthenticatedUserType
 from sms import SayqalSms
@@ -174,7 +175,7 @@ class StudentUserPasswordUpdateAPIView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(
-                {"success": True, "message": "Parol muvaffaqiyatli yangilandi"},
+                {"success": True, "detail": "Parol muvaffaqiyatli yangilandi"},
                 status=status.HTTP_200_OK
             )
 
@@ -182,6 +183,36 @@ class StudentUserPasswordUpdateAPIView(APIView):
             {"success": False, "errors": serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class ForgotPasswordSendSmsAPIView(APIView):
+    def post(self, request):
+        serializer = ForgotPasswordSendSmsSerializer(data=request.data)
+        if serializer.is_valid():
+            sms = serializer.save()
+
+            # SMS yuborish
+            sms_service = SayqalSms()
+            sms_service.send_sms(
+                sms.phone_number,
+                f"Parolni tiklash kodi: {sms.code}"
+            )
+
+            return Response({
+                "detail": "Parolni tiklash uchun kod yuborildi",
+                "phone_number": sms.phone_number,
+                "jshshir": sms.jshshir
+            })
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ForgotPasswordVerifyAPIView(APIView):
+    def post(self, request):
+        serializer = ForgotPasswordVerifySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"detail": "Parol muvaffaqiyatli yangilandi"})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # class StudentUserRegisterAPIView(APIView):
 #     def post(self, request):

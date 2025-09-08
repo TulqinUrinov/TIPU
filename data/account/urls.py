@@ -7,6 +7,8 @@ from data.account.views import (
     StudentUserPasswordUpdateAPIView,
     StudentMeAPIView,
     ResendSmsCodeAPIView,
+    ForgotPasswordSendSmsAPIView,
+    ForgotPasswordVerifyAPIView,
 )
 
 urlpatterns = [
@@ -17,4 +19,6 @@ urlpatterns = [
     path('password-update/', StudentUserPasswordUpdateAPIView.as_view(), name='student-password-update'),
     path('token/refresh/', JWTtokenRefresh.as_view(), name='token-refresh'),
     path('me/', StudentMeAPIView.as_view(), name='student-me'),
+    path("forgot-password/send-sms/", ForgotPasswordSendSmsAPIView.as_view(), name="forgot-password-send-sms"),
+    path("forgot-password/verify/", ForgotPasswordVerifyAPIView.as_view(), name="forgot-password-verify"),
 ]

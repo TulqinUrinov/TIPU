@@ -135,6 +135,94 @@ class StudentUserPasswordUpdateSerializer(serializers.Serializer):
         student_user.set_password(self.validated_data['new_password'])
         return student_user
 
+
+class ForgotPasswordSendSmsSerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    jshshir = serializers.CharField(max_length=14)
+    new_password = serializers.CharField(write_only=True)
+    confirm_password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        phone_number = attrs.get("phone_number")
+        jshshir = attrs.get("jshshir")
+        new_password = attrs.get("new_password")
+        confirm_password = attrs.get("confirm_password")
+
+        if new_password != confirm_password:
+            raise serializers.ValidationError({"password": "Parollar mos emas"})
+
+        if not StudentUser.objects.filter(
+            phone_number=phone_number,
+            student__jshshir=jshshir
+        ).exists():
+            raise serializers.ValidationError(
+                {"detail": "Telefon raqam yoki JSHSHIR noto‘g‘ri"}
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        phone_number = validated_data["phone_number"]
+        jshshir = validated_data["jshshir"]
+        password = make_password(validated_data["new_password"])
+
+        # Eski sms yozuvlarini o‘chirish
+        SmsVerification.objects.filter(phone_number=phone_number).delete()
+
+        # Yangi sms yozuv
+        sms = SmsVerification.objects.create(
+            phone_number=phone_number,
+            jshshir=jshshir,
+            password=password   # vaqtincha shu yerda saqlanadi
+        )
+        return sms
+
+
+class ForgotPasswordVerifySerializer(serializers.Serializer):
+    phone_number = serializers.CharField(max_length=15)
+    jshshir = serializers.CharField(max_length=14)
+    code = serializers.CharField(max_length=6)
+
+    def validate(self, attrs):
+        phone_number = attrs.get("phone_number")
+        jshshir = attrs.get("jshshir")
+        code = attrs.get("code")
+
+        try:
+            sms = SmsVerification.objects.get(
+                phone_number=phone_number,
+                jshshir=jshshir,
+                code=code,
+                is_verified=False
+            )
+        except SmsVerification.DoesNotExist:
+            raise serializers.ValidationError({"code": "Kod yoki ma'lumotlar noto‘g‘ri"})
+
+        if sms.is_expired():
+            raise serializers.ValidationError({"code": "Kod eskirgan"})
+
+        attrs["sms"] = sms
+        return attrs
+
+    def create(self, validated_data):
+        sms = validated_data["sms"]
+
+        # studentni topamiz
+        student_user = StudentUser.objects.get(
+            phone_number=sms.phone_number,
+            student__jshshir=sms.jshshir
+        )
+
+        # sms ichidagi hashlangan parolni update qilamiz
+        student_user.password = sms.password
+        student_user.save()
+
+        # sms tasdiqlanadi
+        sms.is_verified = True
+        sms.save()
+
+        return student_user
+
 # # Registratsiya
 # class StudentUserRegisterSerializer(serializers.ModelSerializer):
 #     jshshir = serializers.CharField(write_only=True)
