@@ -1,8 +1,8 @@
+from rest_framework import serializers
 from django.db.models import Sum, DecimalField, ExpressionWrapper, Value, F
 from django.db.models.functions import Coalesce, NullIf
-from rest_framework import serializers
 
-from data.payment.models import Payment, InstallmentPayment
+from data.payment.models import Payment
 from data.student.models import Student, PhoneNumber
 
 

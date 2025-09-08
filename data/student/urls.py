@@ -1,6 +1,15 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
-from data.student.views import *
+from data.student.views import (
+    PhoneNumberViewSet,
+    StudentEduYearListApiView,
+    StudentEduYearExcelExportApiView,
+    StudentDetailApiView,
+    StudentStatisticsApiView,
+    StatisticsExcelApiView,
+    FacultyStatsAPIView,
+    SendSmsView,
+)
 
 router = DefaultRouter()
 router.register(r"number", PhoneNumberViewSet)

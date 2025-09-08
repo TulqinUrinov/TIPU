@@ -1,4 +1,3 @@
-from django.views.generic import ListView
 from rest_framework.generics import ListAPIView
 
 from data.common.permission import IsAuthenticatedUserType

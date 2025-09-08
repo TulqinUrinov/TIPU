@@ -1,5 +1,4 @@
 import os
-
 import requests
 from django.db.models import Value, F, DecimalField, ExpressionWrapper, Sum
 from django.db.models.functions import Coalesce, NullIf
