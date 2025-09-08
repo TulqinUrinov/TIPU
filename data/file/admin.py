@@ -1,5 +1,3 @@
-from multiprocessing.resource_tracker import register
-
 from django.contrib import admin
 
 from data.file.models import Files, ContractFiles, FileDeleteHistory

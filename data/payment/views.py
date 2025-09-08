@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from data.common.permission import IsAuthenticatedUserType
 
-from rest_framework import viewsets, mixins
+from rest_framework import viewsets
 from .models import InstallmentPayment, Payment, ReminderConfig, ActionHistory
 from .serializers import (
     InstallmentPaymentSerializer,
