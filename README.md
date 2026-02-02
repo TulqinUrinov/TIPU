@@ -80,7 +80,7 @@ docker-compose exec web python manage.py loaddata initial_data
 ## 🚀 Usage
 
 Access the application:
-- **API**: http://localhost:8000/api/
+- **API**: http://localhost:8000/
 - **Admin Dashboard**: http://localhost:8000/admin/
 - **Student Portal**: http://localhost:8000/student/
 
@@ -96,35 +96,6 @@ TIPU/
 ├── r.txt            # Requirements file
 └── docker-compose.yml
 ```
-
-## 🔧 API Endpoints
-
-### Authentication
-- `POST /api/auth/login/` - User login
-- `POST /api/auth/logout/` - User logout
-- `POST /api/auth/refresh/` - Refresh JWT token
-
-### Contracts
-- `GET /api/contracts/` - List all contracts
-- `POST /api/contracts/` - Generate new contract
-- `GET /api/contracts/{id}/` - View contract details
-- `GET /api/contracts/{id}/download/` - Download contract PDF
-
-### Payments
-- `GET /api/payments/` - List all payments
-- `POST /api/payments/` - Record payment
-- `GET /api/installments/` - View installment schedules
-- `PUT /api/installments/{id}/` - Modify payment schedule
-
-### Students
-- `GET /api/students/` - List all students
-- `GET /api/students/{id}/` - Student profile
-- `PUT /api/students/{id}/` - Update student information
-
-### SMS
-- `POST /api/sms/send/` - Send manual SMS notification
-- `GET /api/sms/history/` - View SMS history
-
 ## 📊 Features in Detail
 
 ### Contract Generation
@@ -136,15 +107,13 @@ TIPU/
 ### Payment Management
 - Flexible installment creation (monthly, quarterly, custom)
 - Payment deadline tracking
-- Automatic calculation of penalties for late payments
 - Payment history and receipts
 
 ### SMS Notifications
 - Automated reminders 3 days before payment deadline
 - Payment confirmation messages
 - Custom notification templates
-- Delivery status tracking
-
+- 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -154,6 +123,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Tulqin Urinov**
 - GitHub: [@TulqinUrinov](https://github.com/TulqinUrinov)
 
-
-
-If you discover any security issues, please email the author directly instead of using the issue tracker.
