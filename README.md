@@ -50,11 +50,14 @@ cp env_example .env
 
 3. Configure your environment variables in `.env`:
 ```
-SECRET_KEY=your_secret_key
-DEBUG=False
-DATABASE_URL=postgresql://user:password@db:5432/tipu
-SMS_API_KEY=your_sms_api_key
-SMS_API_URL=your_sms_provider_url
+POSTGRES_DB=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_HOST=
+POSTGRES_PORT=
+
+SECRET_KEY=
+BOT_TOKEN=
 ```
 
 4. Build and run with Docker
