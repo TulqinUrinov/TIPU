@@ -34,6 +34,7 @@ ALLOWED_HOSTS = [
     "mt.sector-soft.ru",
     "alter-payment-du51.vercel.app",
     "alter-payment-student-kpiy.vercel.app",
+    "https://alter-payment-du51.vercel.app/"
 ]
 
 # Application definition
